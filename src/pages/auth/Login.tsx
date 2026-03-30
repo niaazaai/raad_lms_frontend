@@ -43,7 +43,7 @@ const LoginPage = () => {
       const result = await login(data.email, data.password);
       if (result === true) {
         const user = useAuthStore.getState().user;
-        const target = redirectParam ?? getDashboardPath(user?.type ?? "customer");
+        const target = redirectParam ?? getDashboardPath(user?.type ?? "user");
         navigate(target, { replace: true });
       } else if (result === "requires_2fa") {
         // 2FA form will be shown via pending2FA state

@@ -42,7 +42,7 @@ const LoginWith2FA = () => {
       const success = await verify2FA(pending2FA.token, data.code);
       if (success) {
         const user = useAuthStore.getState().user;
-        navigate(getDashboardPath(user?.type ?? "customer"), { replace: true });
+        navigate(getDashboardPath(user?.type ?? "user"), { replace: true });
       } else {
         const currentError = useAuthStore.getState().error;
         setError("code", { type: "manual", message: currentError || "Invalid code" });
