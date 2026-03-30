@@ -27,9 +27,8 @@ Browser → Host Nginx (HTTPS, security headers, routing)
 - Lucide React (icons)
 - date-fns (date formatting)
 
-**Two app areas:**
-- **Public website** — `PublicLayout` (header + footer). Routes: `/`, `/search/food`, `/search/restaurants`, `/restaurants/:slug`, `/gallery`, `/saved`, `/basket`, `/checkout`, `/orders`, `/about`, `/contact`, and CMS static pages (e.g. `/privacy`, `/terms`, `/cookies`, `/refund`, `/help-center`) via dynamic `:slug` under `StaticPageLayout`. Data from `@/modules/Public` (useHomepage, usePublicRestaurants, useSearchMenuItems, usePublicStaticPage). Basket and saved state from Zustand (persisted). The public header uses the global auth store: when authenticated it shows the user avatar/name and links to the user’s type‑specific dashboard using `getDashboardPath(user.type)`.
-- **Dashboard (protected)** — `MainLayout` (sidebar + header). Routes: `/dashboard` (admin), `/courier`, `/restaurant`, `/customer/dashboard`, `/settings`, `/restaurants/*`, `/users/*`, `/roles/*`, `/permissions/*`, `/static-pages/*`. Permission-gated via `ProtectedRoute`; config in `ProtectedRoutes.tsx` and `Routes.ts`. Non‑admin user types are redirected away from `/dashboard` to their own default dashboard path using `getDashboardPath`.
+**App area:**
+- **Dashboard (protected)** — `MainLayout` (sidebar + header). Routes: `/dashboard`, `/settings`, `/users/*`, `/roles/*`, `/permissions/*`. Permission-gated via `ProtectedRoute`; config in `ProtectedRoutes.tsx` and `Routes.ts`. Unauthenticated users hit **Auth** routes (`/login`, `/register`, email verification) then land in the dashboard after login. **`getDashboardPath(user.type)` always returns `"/dashboard"`** — there is a single dashboard; `UserType` is only `"admin"` | `"user"`.
 
 ---
 
@@ -40,8 +39,7 @@ src/
 ├── assets/css/index.css         # Tailwind v4 + design tokens (CSS variables)
 ├── components/
 │   ├── ui/                      # shadcn/ui (Button, Input, Card, DataTable, DropdownMenu, etc.)
-│   ├── errors/                  # ErrorFallback, error boundary components
-│   └── BasketDrawer.tsx         # Mini basket drawer (public header)
+│   └── errors/                  # ErrorFallback, error boundary components
 ├── data/
 │   ├── constants/               # API_ENDPOINTS, REQUEST_METHODS
 │   ├── enums/                   # TypeScript enums (shared across modules)
@@ -51,41 +49,27 @@ src/
 ├── hooks/
 │   └── common/                  # useApi, useQueryApi, useMutationApi, useDebounce
 ├── layouts/
-│   ├── components/              # Header, Sidebar (MainLayout); PublicHeader, PublicFooter (public site)
-│   ├── MainLayout.tsx           # Dashboard / protected area layout
-│   └── PublicLayout.tsx         # Public website layout (header + footer + Outlet)
+│   ├── components/              # Header, Sidebar (MainLayout)
+│   └── MainLayout.tsx           # Dashboard / protected area layout
 ├── lib/                         # Utility functions (cn, formatDate, etc.)
 ├── modules/                     # Feature modules (self-contained)
-│   ├── Public/                  # Public API (no auth): endpoints, models, hooks (useHomepage, usePublicRestaurants, usePublicStaticPage, usePublicStaticPages, etc.)
-│   ├── Cms/                     # Static pages CRUD: StaticPageList, StaticPageForm, useStaticPages
-│   ├── Courier/                 # Courier management: CourierList, useCouriers
-│   ├── Restaurant/
-│   │   ├── components/          # Module-specific components
-│   │   ├── data/
-│   │   │   ├── constants/       # RESTAURANT_ENDPOINTS, RESTAURANT_QUERY_KEYS
-│   │   │   └── models/          # Restaurant.ts (Zod schemas + types)
-│   │   ├── hooks/               # useRestaurants, useCreateRestaurant, etc.
-│   │   ├── pages/               # RestaurantList, RestaurantDetail, etc.
-│   │   └── routes/              # RestaurantRoutes array
-│   └── UserManagement/          # Same structure as Restaurant
+│   ├── UserManagement/          # Users, roles, permissions: lists, forms, hooks, routes
+│   └── Notifications/         # In-app notifications (hooks, components as applicable)
 ├── pages/                       # Top-level pages
-│   ├── public/                  # Public website: HomePage, FoodSearchPage, BasketPage, CheckoutPage, etc.
 │   ├── auth/                    # Login, Register, VerifyEmail, VerifyEmailSuccess, VerifyEmailExpired
 │   ├── errors/                  # NotFound, Unauthorized
-│   └── Dashboard.tsx            # Admin dashboard; other dashboards are type-specific pages (e.g. Courier, Restaurant, Customer)
+│   └── Dashboard.tsx            # Main dashboard
 ├── providers/                   # QueryProvider (React Query config)
 ├── routes/
-│   ├── AppRoutes.tsx            # Root routing (location-aware); PublicLayout + Layout (protected)
+│   ├── AppRoutes.tsx            # Root routing (location-aware); Auth + protected MainLayout
 │   ├── ProtectedRoutes.tsx     # Flattened protected route config (dashboard + modules)
 │   ├── base.ts                  # protectedRoutePrefix, create, show, search constants
-│   └── Routes.ts                # Central route aggregate (restaurant, userManagement) for menus/breadcrumbs
+│   └── Routes.ts                # Central route aggregate (e.g. userManagement) for menus/breadcrumbs
 ├── services/                    # apiClient.ts, callApi.ts (API layer)
 ├── store/                       # Zustand stores
 │   ├── auth/                    # authStore
-│   ├── layout/                  # layoutStore (theme, sidebar)
-│   ├── errors/                  # errorStore
-│   ├── basket/                  # basketStore (persist) — cart items
-│   └── saved/                   # savedStore (persist) — liked/saved menu items
+│   ├── layout/                  # layoutStore (theme, sidebar; persist key: raad-lms-layout)
+│   └── errors/                  # errorStore
 ├── types/                       # Shared types (api.ts, base.ts, routes.ts, datatable.ts)
 ├── utils/
 │   └── routeHandling.ts         # getProtectedRoute, getCreateRoute, getSearchRoute, getShowRoute, makeShowRoute
@@ -169,11 +153,9 @@ export default MyFeaturePage;
 ### 3. State Management (Zustand)
 
 **Global stores (single entry: `src/store/index.ts`):**
-- **auth** — user, `type`, permissions, login/logout, fetchUser (hydrated from `/api/v1/auth/me` using Sanctum session cookie)
-- **layout** — theme, sidebar, screen size (persist: themeMode, userSettings)
+- **auth** — user, `type` (`"admin"` | `"user"`), permissions, login/logout, fetchUser (hydrated from `/api/v1/auth/me` using Sanctum session cookie). Persist key (if used): `raad-lms-auth` or as configured in the store.
+- **layout** — theme, sidebar, screen size (persist: `raad-lms-layout` — e.g. themeMode, userSettings)
 - **errors** — global error list / toasts
-- **basket** — cart items (persist: `raad-lms-basket`); addItem, removeItem, updateQuantity, totalPrice
-- **saved** — liked/saved menu items (persist: `raad-lms-saved`); toggleSaved, isSaved, removeSaved
 
 ```tsx
 import { create } from "zustand";
@@ -197,11 +179,11 @@ export const useMyStore = create<MyState>()((set) => ({
 ```
 
 **Rules:**
-- Zustand is for client-only state (auth session, UI layout, error tracking, basket, saved items)
+- Zustand is for client-only state (auth session, UI layout, error tracking)
 - Server state (API data) uses React Query, NOT Zustand
 - Store files live in `src/store/<domain>/`
 - Export both the store hook and the state interface from `src/store/index.ts`
-- Use `persist` middleware for basket and saved so they survive refresh
+- Use `persist` middleware only where UI preferences should survive refresh; **prefix persist keys with `raad-lms-`** (e.g. `raad-lms-layout`)
 
 ### 4. API & Data Fetching
 
@@ -404,7 +386,9 @@ const CreateMyItemForm = ({ onSuccess }: CreateMyItemFormProps) => {
 };
 ```
 
-### 8. Routing, User Types & Permissions
+### 9. Routing, User Types & Permissions
+
+**`UserType`:** Only `"admin"` | `"user"`. There is no per-type dashboard path branching beyond permissions — **`getDashboardPath` always returns `"/dashboard"`**.
 
 **Route architecture (aligned with central config + helpers):**
 
@@ -417,11 +401,10 @@ const CreateMyItemForm = ({ onSuccess }: CreateMyItemFormProps) => {
   - `getSearchRoute(route)` — `${route}/search`
   - `getShowRoute(route, idParamName?)` — `${route}/show/:id`
   - `makeShowRoute(route, id)` — `${route}/show/${id}`
-- **`src/routes/Routes.ts`** — Central aggregate of module route configs (e.g. `routes.restaurant`, `routes.userManagement`). Use for breadcrumbs, menus, or any non-React reference.
-- **`src/routes/AppRoutes.tsx`** — Uses `useLocation()` and `<Routes location={location}>`. Three groups:
-  1. **Public (PublicLayout)** — `/`, `/search/food`, `/search/restaurants`, `/restaurants/:slug`, `/gallery`, `/saved`, `/basket`, `/checkout`, `/checkout/thank-you`, `/orders`, `/courier-signup`, `/about`, `/contact`, CMS static pages via `StaticPageLayout` (dynamic `:slug`: `/privacy`, `/terms`, `/cookies`, `/refund`, `/help-center`, etc.). No auth.
-  2. **Auth (no layout)** — `/login`, `/register`, `/verify-email`, `/verify-email/success`, `/verify-email/expired`
-  3. **Protected (Layout / MainLayout)** — Each route from `ProtectedRoutes.tsx` mapped to `<Route path={...} element={<Layout />}><Route index element={content} /></Route>`. Content wrapped in `ProtectedRoute` with optional `permission` / `anyPermission`. `AuthWrapper` runs `fetchUser()` on mount and redirects unauthenticated users to `/login?redirect=...`.
+- **`src/routes/Routes.ts`** — Central aggregate of module route configs (e.g. `routes.userManagement`). Use for breadcrumbs, menus, or any non-React reference.
+- **`src/routes/AppRoutes.tsx`** — Uses `useLocation()` and `<Routes location={location}>`. **Two groups:**
+  1. **Auth (no MainLayout)** — `/login`, `/register`, `/verify-email`, `/verify-email/success`, `/verify-email/expired`
+  2. **Protected (MainLayout)** — Each route from `ProtectedRoutes.tsx` mapped to `<Route path={...} element={<Layout />}><Route index element={content} /></Route>`. Typical paths: `/dashboard`, `/settings`, `/users/*`, `/roles/*`, `/permissions/*`. Content wrapped in `ProtectedRoute` with optional `permission` / `anyPermission`. `AuthWrapper` runs `fetchUser()` on mount and redirects unauthenticated users to `/login?redirect=...`.
 
 **Defining module routes:**
 
@@ -442,13 +425,12 @@ export const MyFeatureRoutes: ProtectedRouteType[] = [
 Register in `src/routes/ProtectedRoutes.tsx`:
 
 ```tsx
+import { UserManagementRoutes } from "@/modules/UserManagement/routes";
 import { MyFeatureRoutes } from "@/modules/MyFeature/routes";
 
 const ProtectedRoutes: ProtectedRouteType[] = [
   { path: "/dashboard", component: <Dashboard />, permission: "" },
-  ...RestaurantRoutes,
   ...UserManagementRoutes,
-  ...CmsRoutes,
   ...MyFeatureRoutes,  // ← add here
 ];
 ```
@@ -500,7 +482,7 @@ const handleDelete = async (id: number) => {
 - **Actions column** — dropdown with Edit, Delete, custom actions
 - **Horizontal scroll** — table scrolls horizontally when many columns; page layout does not scroll
 - **Fully configurable** — all options set at initialization
-- **Reusable** — same component for Users, Restaurants, Static Pages, etc.
+- **Reusable** — same component for Users, Roles, Permissions, and other admin lists
 - **Typesense placeholder** — architecture supports future search adapter integration
 
 **Usage pattern:**
@@ -596,7 +578,7 @@ const MyListPage = () => {
 - Query params: `search`, `page`, `per_page`, `sort_by`, `sort_dir`, plus filter keys (e.g. `category`, `is_published`)
 - Response: `{ data: T[], meta: { pagination: { total, count, per_page, current_page, total_pages, has_more_pages } } }`
 
-**Reference implementation:** `src/modules/Cms/features/StaticPageList/StaticPageList.tsx`
+**Reference implementation:** Use an existing module list page under `src/modules/UserManagement/` (or another dashboard module) as the canonical DataTable example.
 
 ### 12. Error Handling
 
@@ -614,12 +596,13 @@ const MyListPage = () => {
 
 ```css
 :root {
-  --primary: #06D001;        /* Green — brand color */
-  --primary-active: #00B400;
+  --primary: #0069B4;         /* Blue — brand primary */
+  --primary-active: #005a9a;  /* Darker blue for active/hover */
+  --auxiliary: #9B3D9A;       /* Purple — secondary accent */
   --danger: #ef4444;          /* Red */
-  --success: #06D001;         /* Green */
+  --success: #22c55e;         /* Green */
   --warning: #f59e0b;         /* Amber */
-  --info: #3b82f6;            /* Blue */
+  --info: #3b82f6;            /* Blue (informational) */
   --background: oklch(1 0 0); /* White */
   --foreground: #071437;      /* Dark blue-black */
   --border: oklch(0.922 0 0); /* Light gray */
@@ -629,7 +612,8 @@ const MyListPage = () => {
 .dark {
   --background: #0f0f0f;
   --foreground: #e7e7e7;
-  --primary: #2AFA21;
+  --primary: #3d9fd9;
+  --auxiliary: #b565b4;
 }
 ```
 
@@ -673,9 +657,9 @@ import { Plus, Pencil, Trash2, Search, ChevronRight } from "lucide-react";
 |------|-----------|---------|
 | Component | PascalCase | `MyItemList.tsx` |
 | Page | PascalCase | `Dashboard.tsx` |
-| Hook | camelCase, `use` prefix | `useRestaurants.ts` |
+| Hook | camelCase, `use` prefix | `useMyFeature.ts` |
 | Store | camelCase, `Store` suffix | `authStore.ts` |
-| Model/Schema | PascalCase | `Restaurant.ts` |
+| Model/Schema | PascalCase | `User.ts` |
 | Constants | camelCase | `endpoints.ts` |
 | Utility | camelCase | `formatDate.ts` |
 | Route config | `index.tsx` | `routes/index.tsx` |
@@ -697,6 +681,8 @@ All backend responses follow this shape:
 { success: false, message: "...", errors?: Record<string, string[]> }
 ```
 
+Production URL examples: `https://your-domain.com` for the SPA, `https://your-domain.com/api/v1/...` for API calls (adjust to your deployment).
+
 ---
 
 ## Adding a New Feature Module (Checklist)
@@ -716,9 +702,7 @@ All backend responses follow this shape:
 4. Add the module to the central aggregate in `src/routes/Routes.ts` (e.g. `myFeature: MyFeatureRoutes`)
 5. Add sidebar link in `src/layouts/components/Sidebar.tsx`
 
-**Public website pages** (no auth, under PublicLayout) live in `src/pages/public/` and use the `Public` module (`src/modules/Public/`) for data (useHomepage, usePublicRestaurants, useSearchMenuItems, usePublicStaticPage, etc.). New public pages are added as `<Route path="..." element={...} />` inside the `PublicLayout` group in `AppRoutes.tsx`.
-
-**Footer Legal & Support** — The footer shows exactly 5 links: Privacy Policy, Terms of Service, Cookie Policy, Refund Policy, Help Center. These are CMS static pages (slugs: `privacy`, `terms`, `cookies`, `refund`, `help-center`). The sidebar in `StaticPageLayout` matches these 5 when viewing a static page.
+All new features are **protected dashboard modules** under `MainLayout`. There is no separate public marketing site in this template.
 
 ---
 
