@@ -14,7 +14,7 @@ const VerifyEmailSuccessPage = () => {
     fetchUser().then(() => {
       const user = useAuthStore.getState().user;
       if (user) {
-        navigate(getDashboardPath(user.type ?? "customer"), { replace: true });
+        navigate(getDashboardPath(user.type ?? "user"), { replace: true });
       }
     });
   }, [fetchUser, navigate]);
@@ -31,7 +31,7 @@ const VerifyEmailSuccessPage = () => {
           </Link>
           {isAuthenticated && user ? (
             <Link
-              to={getDashboardPath(user.type ?? "customer")}
+              to={getDashboardPath(user.type ?? "user")}
               className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-active"
             >
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">
@@ -63,10 +63,10 @@ const VerifyEmailSuccessPage = () => {
           </p>
 
           <Link
-            to="/"
+            to="/dashboard"
             className="mt-8 inline-block rounded-lg bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-primary-active"
           >
-            Continue to shopping
+            Continue to dashboard
           </Link>
         </section>
       </main>

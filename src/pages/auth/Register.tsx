@@ -10,8 +10,8 @@ import { RequestMethod } from "@/data/constants/methods";
 import { cn } from "@/lib/utils";
 import { AUTH_BASE_URL } from "@/services/apiClient";
 
-const SLOGAN = "Fresh food, delivered to your door.";
-const FOOD_BG = "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&w=1600";
+const SLOGAN = "Learn. Manage. Grow.";
+const HERO_BG = "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600";
 
 const RegisterPage = () => {
   const navigate = useNavigate();
@@ -257,14 +257,14 @@ const RegisterPage = () => {
         </main>
       </div>
 
-      {/* Right: Branded panel with food background */}
+      {/* Right: Branded panel */}
       <div
         className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-8 lg:p-12 overflow-hidden"
         aria-hidden
       >
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${FOOD_BG})` }}
+          style={{ backgroundImage: `url(${HERO_BG})` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
 
