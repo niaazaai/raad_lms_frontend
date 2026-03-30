@@ -18,7 +18,7 @@ const sizeClasses = {
 
 /**
  * Avatar: shows profile image when src is provided, otherwise initials from firstName + lastName.
- * Use wherever a profile picture is needed (courier, user, etc.).
+ * Use wherever a profile picture is needed (user, etc.).
  */
 const Avatar = React.forwardRef<HTMLDivElement, AvatarProps>(
   ({ src, firstName, lastName, alt = "", size = "md", className, ...props }, ref) => {
