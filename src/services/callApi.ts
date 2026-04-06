@@ -1,5 +1,5 @@
 import { ApiResponse as ApisauceResponse, ApisauceConfig } from "apisauce";
-import apiClient, { CSRF_COOKIE_URL } from "./apiClient";
+import apiClient, { CSRF_COOKIE_PATH } from "./apiClient";
 import { ApiResponse, ObjectAny } from "@/types";
 import { RequestMethod } from "@/data/constants/methods";
 import { toast } from "sonner";
@@ -24,7 +24,7 @@ export async function fetchCsrfCookie(): Promise<void> {
 
   csrfPromise = (async () => {
     try {
-      const response = await fetch(CSRF_COOKIE_URL, {
+      const response = await fetch(CSRF_COOKIE_PATH, {
         method: "GET",
         credentials: "include",
         headers: { Accept: "application/json" },

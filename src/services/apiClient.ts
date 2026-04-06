@@ -1,25 +1,24 @@
 import { create, ApisauceInstance } from "apisauce";
 
 /**
- * Base API URL — same-origin in the browser so production requests
- * (e.g. https://your-domain.com) never hit localhost.
+ * API base path (same-origin). Using a relative path avoids Vite/Rollup evaluating
+ * `window` at build time and baking `http://localhost:8000` into the production bundle.
  */
-const getApiBaseUrl = (): string => {
-  if (typeof window !== "undefined") return window.location.origin;
-  return import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
-};
+export const API_V1_BASE = "/api/v1";
 
-export const API_BASE_URL = getApiBaseUrl();
-
-export const AUTH_BASE_URL = getApiBaseUrl();
+/** Sanctum CSRF endpoint (same-origin). */
+export const CSRF_COOKIE_PATH = "/sanctum/csrf-cookie";
 
 /**
- * Sanctum's built-in CSRF cookie endpoint (relative to origin, NOT /api/v1).
+ * Absolute origin for rare cases (e.g. debugging). Prefer relative paths in the UI.
  */
-export const CSRF_COOKIE_URL = `${API_BASE_URL}/sanctum/csrf-cookie`;
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") return window.location.origin;
+  return import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+}
 
 const apiClient: ApisauceInstance = create({
-  baseURL: `${API_BASE_URL}/api/v1`,
+  baseURL: API_V1_BASE,
   headers: {
     Accept: "application/json",
     "Content-Type": "application/json",

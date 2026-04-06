@@ -23,7 +23,7 @@ ECHO   := echo -e
 help:
 	@$(ECHO) "$(BOLD)Raad LMS Frontend$(RESET)"
 	@$(ECHO) ""
-	@$(ECHO) "  $(GREEN)up$(RESET)              Build and start production container"
+	@$(ECHO) "  $(GREEN)up$(RESET)              Build and start SPA (host nginx serves it on :80)"
 	@$(ECHO) "  $(GREEN)down$(RESET)            Stop container (keeps volumes)"
 	@$(ECHO) "  $(GREEN)build$(RESET)           Build production image"
 	@$(ECHO) "  $(GREEN)force-rebuild$(RESET)   Stop, rebuild (no cache), start"
@@ -41,9 +41,10 @@ help:
 # =============================================================================
 up:
 	@$(ECHO) "$(BOLD)Building and starting frontend...$(RESET)"
+	@docker network inspect raad-lms-network >/dev/null 2>&1 || docker network create raad-lms-network
 	@$(COMPOSE) build --pull
 	@$(COMPOSE) up -d --build --remove-orphans
-	@$(ECHO) "$(GREEN)Frontend is up: http://localhost:3000$(RESET)"
+	@$(ECHO) "$(GREEN)SPA is proxied on port 80 (host nginx). Container: 127.0.0.1:3000$(RESET)"
 
 down:
 	$(COMPOSE) down --remove-orphans
@@ -58,7 +59,7 @@ force-rebuild:
 	@$(COMPOSE) build --no-cache app
 	@$(ECHO) "$(BOLD)3. Starting...$(RESET)"
 	@$(COMPOSE) up -d --remove-orphans
-	@$(ECHO) "$(GREEN)Force rebuild done: http://localhost:3000$(RESET)"
+	@$(ECHO) "$(GREEN)Force rebuild done. Use http://YOUR_SERVER (port 80) for the app.$(RESET)"
 
 restart:
 	$(COMPOSE) restart

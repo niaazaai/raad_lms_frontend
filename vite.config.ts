@@ -32,11 +32,21 @@ export default defineConfig(({ command, mode }) => {
       // Proxy for development - forwards API requests to backend
       // Simple: all /api/* requests go to backend
       proxy: {
-        '/api': {
+        "/api": {
           target: backendUrl,
           changeOrigin: true,
           secure: false,
           ws: true,
+        },
+        "/sanctum": {
+          target: backendUrl,
+          changeOrigin: true,
+          secure: false,
+        },
+        "/auth": {
+          target: backendUrl,
+          changeOrigin: true,
+          secure: false,
         },
       },
     },

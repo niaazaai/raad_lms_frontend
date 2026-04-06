@@ -5,11 +5,11 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_APP_NAME: ${VITE_APP_NAME:-Raad LMS}
-        VITE_APP_URL: ${VITE_APP_URL:-http://localhost:3000}
+        VITE_APP_URL: ${VITE_APP_URL:-http://127.0.0.1}
     image: raad-lms-frontend:${APP_IMAGE_TAG:-local}
     container_name: raad-lms-frontend
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:80"
     restart: unless-stopped
     networks:
       - raad-lms-network

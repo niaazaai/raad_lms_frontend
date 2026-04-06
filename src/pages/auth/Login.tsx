@@ -7,7 +7,6 @@ import { LoginSchema, LoginFormData, getDashboardPath } from "@/data/models/User
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
 import { cn } from "@/lib/utils";
-import { AUTH_BASE_URL } from "@/services/apiClient";
 import LoginWith2FA from "./LoginWith2FA";
 
 const SLOGAN = "Learn. Manage. Grow.";
@@ -209,7 +208,7 @@ const LoginPage = () => {
               </div>
 
               <a
-                href={`${AUTH_BASE_URL}/auth/google`}
+                href="/auth/google"
                 className="flex w-full items-center justify-center gap-2 rounded-lg border border-input bg-background px-4 py-3 text-sm font-medium hover:bg-muted transition-colors"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
