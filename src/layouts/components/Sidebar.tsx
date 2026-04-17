@@ -9,6 +9,7 @@ import {
   Key,
   ChevronDown,
   UserCog,
+  BookOpen,
 } from "lucide-react";
 import { useLayoutStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,53 @@ const navItems: NavItem[] = [
     title: "Dashboard",
     path: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
+  },
+  {
+    title: "Course module",
+    icon: <BookOpen className="h-5 w-5" />,
+    anyPermission: [
+      "course.main_categories.read",
+      "course.sub_categories.read",
+      "course.faasl_modules.read",
+      "course.courses.read",
+      "course.lessons.read",
+      "course.assignments.read",
+      "course.resources.read",
+      "course.quiz_files.read",
+      "course.discounts.read",
+      "course.certificates.read",
+      "course.subscription_plans.read",
+      "course.subscriptions.read",
+      "course.student_subscriptions.read",
+      "course.instructors.read",
+      "course.lms_classes.read",
+      "course.class_students.read",
+    ],
+    children: [
+      {
+        title: "Overview",
+        path: "/course",
+        icon: <BookOpen className="h-4 w-4" />,
+        anyPermission: [
+          "course.main_categories.read",
+          "course.sub_categories.read",
+          "course.faasl_modules.read",
+          "course.courses.read",
+          "course.lessons.read",
+          "course.assignments.read",
+          "course.resources.read",
+          "course.quiz_files.read",
+          "course.discounts.read",
+          "course.certificates.read",
+          "course.subscription_plans.read",
+          "course.subscriptions.read",
+          "course.student_subscriptions.read",
+          "course.instructors.read",
+          "course.lms_classes.read",
+          "course.class_students.read",
+        ],
+      },
+    ],
   },
   {
     title: "User Management",
@@ -66,6 +114,7 @@ const Sidebar = () => {
   const location = useLocation();
   const [expandedGroups, setExpandedGroups] = useState<string[]>([
     "User Management",
+    "Course module",
   ]);
 
   const currentFullPath = location.pathname + (location.search || "");

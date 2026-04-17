@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 const CreateUserFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  type: z.enum(["admin", "student", "instructor"]).default("student"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   password_confirmation: z.string(),
   avatar: z.any().optional(),
@@ -29,6 +30,7 @@ const CreateUserFormSchema = z.object({
 const UpdateUserFormSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
+  type: z.enum(["admin", "student", "instructor"]).optional(),
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
   password_confirmation: z.string().optional().or(z.literal("")),
   avatar: z.any().optional(),
@@ -67,6 +69,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
     defaultValues: {
       name: "",
       email: "",
+      type: "student",
       password: "",
       password_confirmation: "",
     },
@@ -79,6 +82,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
       reset({
         name: existingUser.name,
         email: existingUser.email,
+        type: existingUser.type ?? "student",
         password: "",
         password_confirmation: "",
       });
@@ -86,6 +90,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
       reset({
         name: "",
         email: "",
+        type: "student",
         password: "",
         password_confirmation: "",
       });
@@ -96,6 +101,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
     const payload: Record<string, unknown> = {
       name: data.name,
       email: data.email,
+      type: (data as { type?: string }).type,
       status: user?.status || "active",
     };
     if (!isEdit || data.password) {
@@ -213,6 +219,18 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
             {errors.email && (
               <p className="mt-1 text-xs text-danger">{(errors as Record<string, { message?: string }>).email?.message}</p>
             )}
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-sm font-medium">User type</label>
+            <select
+              {...register("type")}
+              className="border-input bg-background w-full rounded-lg border px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+            >
+              <option value="student">Student</option>
+              <option value="instructor">Instructor</option>
+              <option value="admin">Admin</option>
+            </select>
           </div>
 
           <div>

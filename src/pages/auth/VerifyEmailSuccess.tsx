@@ -14,7 +14,7 @@ const VerifyEmailSuccessPage = () => {
     fetchUser().then(() => {
       const user = useAuthStore.getState().user;
       if (user) {
-        navigate(getDashboardPath(user.type ?? "user"), { replace: true });
+        navigate(getDashboardPath(user.type ?? "student"), { replace: true });
       }
     });
   }, [fetchUser, navigate]);
@@ -31,7 +31,7 @@ const VerifyEmailSuccessPage = () => {
           </Link>
           {isAuthenticated && user ? (
             <Link
-              to={getDashboardPath(user.type ?? "user")}
+              to={getDashboardPath(user.type ?? "student")}
               className="flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-active"
             >
               <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-xs font-bold text-white">

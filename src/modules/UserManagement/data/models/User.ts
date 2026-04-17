@@ -26,6 +26,8 @@ export const UserManagementSchema = z.object({
   id: z.number(),
   name: z.string(),
   email: z.string().email(),
+  type: z.enum(["admin", "student", "instructor"]).optional(),
+  tenant_id: z.number().nullable().optional(),
   avatar: z.string().nullable().optional(),
   email_verified_at: z.string().nullable().optional(),
   status: z.nativeEnum(UserStatus).optional(),
@@ -45,6 +47,7 @@ export const CreateUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   password_confirmation: z.string(),
+  type: z.enum(["admin", "student", "instructor"]).optional(),
   roles: z.array(z.string()).optional(),
 }).refine((data) => data.password === data.password_confirmation, {
   message: "Passwords don't match",
@@ -61,6 +64,7 @@ export const UpdateUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
   password_confirmation: z.string().optional().or(z.literal("")),
+  type: z.enum(["admin", "student", "instructor"]).optional(),
   roles: z.array(z.string()).optional(),
   status: z.enum(["active", "inactive"]).optional(),
 }).refine((data) => !data.password || data.password === data.password_confirmation, {

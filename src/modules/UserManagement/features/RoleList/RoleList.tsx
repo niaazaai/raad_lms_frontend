@@ -95,7 +95,7 @@ const RoleList = () => {
             </div>
             <div>
               <p className="font-medium capitalize text-foreground">{role.name}</p>
-              {["admin", "user"].includes(role.name.toLowerCase()) && (
+              {["admin", "root", "student", "instructor"].includes(role.name.toLowerCase()) && (
                 <span className="text-xs text-muted-foreground">System Role</span>
               )}
             </div>
@@ -134,7 +134,7 @@ const RoleList = () => {
         label: "Edit",
         icon: <Edit className="h-4 w-4" />,
         onClick: (role) => {
-          if (!["admin", "user"].includes(role.name.toLowerCase())) {
+          if (!["admin", "root", "student", "instructor"].includes(role.name.toLowerCase())) {
             navigate(`/roles/${role.id}/edit`);
           }
         },
@@ -146,7 +146,7 @@ const RoleList = () => {
         icon: <Trash2 className="h-4 w-4" />,
         variant: "danger",
         onClick: async (role) => {
-          if (!["admin", "user"].includes(role.name.toLowerCase())) {
+          if (!["admin", "root", "student", "instructor"].includes(role.name.toLowerCase())) {
             const confirmed = await confirm(confirmPresets.delete(`"${role.name}"`));
             if (confirmed) {
               deleteRole({ id: role.id });
@@ -284,7 +284,7 @@ const RoleCard = ({ role, viewMode }: RoleCardProps) => {
   const { mutate: deleteRole, isPending: isDeleting } = useDeleteRole(role.id);
   const { confirm } = useConfirmDialog();
 
-  const isSystemRole = ["admin", "user"].includes(role.name.toLowerCase());
+  const isSystemRole = ["admin", "root", "student", "instructor"].includes(role.name.toLowerCase());
 
   const handleDelete = async () => {
     setShowMenu(false);

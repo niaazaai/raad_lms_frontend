@@ -1,12 +1,13 @@
 import * as z from "zod";
 
-export const UserType = z.enum(["admin", "user"]);
+export const UserType = z.enum(["admin", "student", "instructor"]);
 export type UserTypeValue = z.infer<typeof UserType>;
 
 export function getDashboardPath(type: UserTypeValue | undefined): string {
   switch (type) {
     case "admin":
-    case "user":
+    case "student":
+    case "instructor":
     default:
       return "/dashboard";
   }
@@ -16,7 +17,8 @@ export const UserSchema = z.object({
   id: z.number(),
   name: z.string(),
   email: z.string().email(),
-  type: UserType.optional().default("user"),
+  type: UserType.optional().default("student"),
+  tenant_id: z.number().nullable().optional(),
   email_verified_at: z.string().nullable().optional(),
   two_factor_enabled: z.boolean().optional(),
   created_at: z.string().optional(),

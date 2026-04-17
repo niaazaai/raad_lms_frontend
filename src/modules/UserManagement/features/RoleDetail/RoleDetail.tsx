@@ -33,7 +33,9 @@ const RoleDetail = () => {
     );
   }
 
-  const isSystemRole = ["admin", "user"].includes(role.name?.toLowerCase() ?? "");
+  const isSystemRole = ["admin", "root", "student", "instructor"].includes(
+    role.name?.toLowerCase() ?? ""
+  );
 
   return (
     <div className="space-y-6">
