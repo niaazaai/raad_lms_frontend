@@ -38,5 +38,7 @@ export {
 export { DataTable } from "./data-table";
 export { default as ImageDropzone } from "./image-dropzone";
 export type { ImageDropzoneProps } from "./image-dropzone";
+export { default as SearchableSelect } from "./searchable-select";
+export type { SearchableSelectProps, SearchableSelectOption } from "./searchable-select";
 export { default as MultiImageDropzone } from "./multi-image-dropzone";
 export type { MultiImageDropzoneProps } from "./multi-image-dropzone";

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Label } from "@/components/ui";
 import { Image as ImageIcon, FileText, X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,17 @@ const ImageDropzone = ({
 }: ImageDropzoneProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!value || value.type === "application/pdf") {
+      setPreviewUrl(null);
+      return undefined;
+    }
+    const url = URL.createObjectURL(value);
+    setPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [value]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -81,7 +92,7 @@ const ImageDropzone = ({
               </div>
             ) : (
               <img
-                src={URL.createObjectURL(value)}
+                src={previewUrl ?? undefined}
                 alt="Preview"
                 className={cn(
                   "object-cover border border-border rounded-lg",
