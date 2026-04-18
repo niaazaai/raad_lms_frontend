@@ -18,7 +18,6 @@ export const UserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   type: UserType.optional().default("student"),
-  tenant_id: z.number().nullable().optional(),
   email_verified_at: z.string().nullable().optional(),
   two_factor_enabled: z.boolean().optional(),
   created_at: z.string().optional(),

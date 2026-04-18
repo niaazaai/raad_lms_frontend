@@ -27,7 +27,6 @@ export const UserManagementSchema = z.object({
   name: z.string(),
   email: z.string().email(),
   type: z.enum(["admin", "student", "instructor"]).optional(),
-  tenant_id: z.number().nullable().optional(),
   avatar: z.string().nullable().optional(),
   email_verified_at: z.string().nullable().optional(),
   status: z.nativeEnum(UserStatus).optional(),
