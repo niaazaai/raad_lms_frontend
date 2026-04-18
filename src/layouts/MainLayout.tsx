@@ -14,7 +14,7 @@ const MainLayout = () => {
       <div
         className={cn(
           "flex flex-1 flex-col transition-all duration-300",
-          sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+          sidebarCollapsed ? "lg:ml-[4.25rem]" : "lg:ml-52"
         )}
       >
         <Header />
