@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import {
   X,
@@ -10,10 +10,18 @@ import {
   ChevronDown,
   UserCog,
   BookOpen,
+  LayoutGrid,
+  List,
 } from "lucide-react";
 import { useLayoutStore } from "@/store";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/features/auth";
+import {
+  buildCourseSidebarRows,
+  COURSE_MODULE_ANY_PERMISSIONS,
+} from "@/modules/Course/data/courseSidebarNav";
+import type { CourseSidebarRow } from "@/modules/Course/data/courseSidebarNav";
+import { COURSE_ENTITY_REGISTRY } from "@/modules/Course/data/courseRegistry";
 
 interface NavItem {
   title: string;
@@ -22,60 +30,55 @@ interface NavItem {
   permission?: string;
   anyPermission?: string[];
   children?: NavItem[];
+  /** Set when children are pre-filtered (e.g. course entity links). */
+  skipChildPermissionFilter?: boolean;
+  /** Non-clickable subsection heading inside an expanded group. */
+  isSectionLabel?: boolean;
+  navKey?: string;
 }
 
-const navItems: NavItem[] = [
+function linkIsActive(pathname: string, itemPath: string): boolean {
+  if (itemPath === "/course") {
+    return pathname === "/course";
+  }
+  return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
+}
+
+function courseRowsToNavItems(rows: CourseSidebarRow[]): NavItem[] {
+  return rows.map((row, index) => {
+    if (row.kind === "overview") {
+      return {
+        navKey: "course-overview",
+        title: "Overview",
+        path: "/course",
+        icon: <LayoutGrid className="h-4 w-4" />,
+        anyPermission: COURSE_MODULE_ANY_PERMISSIONS,
+      };
+    }
+    if (row.kind === "section") {
+      return {
+        navKey: `course-section-${row.title}-${index}`,
+        title: row.title,
+        icon: null,
+        isSectionLabel: true,
+      };
+    }
+    const cfg = COURSE_ENTITY_REGISTRY[row.slug];
+    return {
+      navKey: `course-entity-${row.slug}`,
+      title: cfg.title,
+      path: `/course/entities/${row.slug}`,
+      icon: <List className="h-4 w-4" />,
+      permission: cfg.permission,
+    };
+  });
+}
+
+const baseNavItems: NavItem[] = [
   {
     title: "Dashboard",
     path: "/dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
-  },
-  {
-    title: "Course module",
-    icon: <BookOpen className="h-5 w-5" />,
-    anyPermission: [
-      "course.main_categories.read",
-      "course.sub_categories.read",
-      "course.faasl_modules.read",
-      "course.courses.read",
-      "course.lessons.read",
-      "course.assignments.read",
-      "course.resources.read",
-      "course.quiz_files.read",
-      "course.discounts.read",
-      "course.certificates.read",
-      "course.subscription_plans.read",
-      "course.subscriptions.read",
-      "course.student_subscriptions.read",
-      "course.instructors.read",
-      "course.lms_classes.read",
-      "course.class_students.read",
-    ],
-    children: [
-      {
-        title: "Overview",
-        path: "/course",
-        icon: <BookOpen className="h-4 w-4" />,
-        anyPermission: [
-          "course.main_categories.read",
-          "course.sub_categories.read",
-          "course.faasl_modules.read",
-          "course.courses.read",
-          "course.lessons.read",
-          "course.assignments.read",
-          "course.resources.read",
-          "course.quiz_files.read",
-          "course.discounts.read",
-          "course.certificates.read",
-          "course.subscription_plans.read",
-          "course.subscriptions.read",
-          "course.student_subscriptions.read",
-          "course.instructors.read",
-          "course.lms_classes.read",
-          "course.class_students.read",
-        ],
-      },
-    ],
   },
   {
     title: "User Management",
@@ -112,15 +115,36 @@ const Sidebar = () => {
   const { sidebarCollapsed, mobileMenuOpen, setMobileMenuOpen } = useLayoutStore();
   const { hasPermission, hasAnyPermission } = useAuth();
   const location = useLocation();
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([
-    "User Management",
-    "Course module",
-  ]);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>(["User Management", "Courses"]);
 
-  const currentFullPath = location.pathname + (location.search || "");
+  const courseNavChildren = useMemo(
+    () => courseRowsToNavItems(buildCourseSidebarRows(hasPermission)),
+    [hasPermission]
+  );
+
+  const navItems: NavItem[] = useMemo(
+    () => [
+      baseNavItems[0],
+      {
+        title: "Courses",
+        icon: <BookOpen className="h-5 w-5" />,
+        anyPermission: COURSE_MODULE_ANY_PERMISSIONS,
+        children: courseNavChildren,
+        skipChildPermissionFilter: true,
+      },
+      ...baseNavItems.slice(1),
+    ],
+    [courseNavChildren]
+  );
+
   const isChildActive = (children?: NavItem[]) => {
     if (!children) return false;
-    return children.some((child) => child.path && currentFullPath === child.path);
+    return children.some(
+      (child) =>
+        child.path &&
+        !child.isSectionLabel &&
+        linkIsActive(location.pathname, child.path)
+    );
   };
 
   const toggleGroup = (title: string) => {
@@ -132,6 +156,18 @@ const Sidebar = () => {
   const filterByPermission = (items: NavItem[]): NavItem[] => {
     return items
       .map((item) => {
+        if (item.skipChildPermissionFilter && item.children) {
+          if (item.anyPermission?.length && !hasAnyPermission(item.anyPermission)) {
+            return null;
+          }
+          if (item.permission && !hasPermission(item.permission)) {
+            return null;
+          }
+          if (item.children.length === 0) {
+            return null;
+          }
+          return item;
+        }
         if (item.children) {
           const filteredChildren = filterByPermission(item.children);
           if (filteredChildren.length === 0) return null;
@@ -150,6 +186,16 @@ const Sidebar = () => {
   const visibleNavItems = filterByPermission(navItems);
 
   const renderNavItem = (item: NavItem, isChild = false) => {
+    if (item.isSectionLabel) {
+      return (
+        <li key={item.navKey ?? item.title}>
+          <div className="px-3 pb-1 pt-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {item.title}
+          </div>
+        </li>
+      );
+    }
+
     if (item.children) {
       const isExpanded = expandedGroups.includes(item.title);
       const hasActiveChild = isChildActive(item.children);
@@ -173,7 +219,7 @@ const Sidebar = () => {
                 <span className="flex-1 text-left">{item.title}</span>
                 <ChevronDown
                   className={cn(
-                    "h-4 w-4 transition-transform duration-200",
+                    "h-4 w-4 shrink-0 transition-transform duration-200",
                     isExpanded && "rotate-180"
                   )}
                 />
@@ -182,7 +228,7 @@ const Sidebar = () => {
           </button>
 
           {!sidebarCollapsed && isExpanded && (
-            <ul className="ml-4 mt-1 space-y-1 border-l border-border pl-3">
+            <ul className="ml-4 mt-1 space-y-0.5 border-l border-border pl-3">
               {item.children.map((child) => renderNavItem(child, true))}
             </ul>
           )}
@@ -190,9 +236,9 @@ const Sidebar = () => {
       );
     }
 
-    const isActive = location.pathname === item.path;
+    const isActive = item.path ? linkIsActive(location.pathname, item.path) : false;
     return (
-      <li key={item.path}>
+      <li key={item.navKey ?? item.path}>
         <NavLink
           to={item.path!}
           onClick={() => setMobileMenuOpen(false)}
@@ -206,7 +252,7 @@ const Sidebar = () => {
           )}
         >
           {item.icon}
-          {!sidebarCollapsed && <span>{item.title}</span>}
+          {!sidebarCollapsed && <span className="min-w-0 flex-1 leading-snug">{item.title}</span>}
         </NavLink>
       </li>
     );
