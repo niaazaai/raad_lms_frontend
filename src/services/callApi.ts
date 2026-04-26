@@ -207,7 +207,8 @@ const handleResponse = <T>({ response, shouldPopError }: HandleResponseProps<T>)
  * Laravel doesn't support file uploads in PUT requests
  */
 const getRequestMethod = (method: string, hasFiles: boolean): string => {
-  if (hasFiles && method.toUpperCase() === RequestMethod.PUT) {
+  const upper = method.toUpperCase();
+  if (hasFiles && (upper === RequestMethod.PUT || upper === RequestMethod.PATCH)) {
     return RequestMethod.POST;
   }
   return method;
@@ -219,9 +220,12 @@ const getRequestMethod = (method: string, hasFiles: boolean): string => {
 const convertToFormData = (data: ObjectAny, method: string): FormData => {
   const formData = new FormData();
 
-  // Add _method override for PUT requests
-  if (method.toUpperCase() === RequestMethod.PUT) {
+  const upper = method.toUpperCase();
+  if (upper === RequestMethod.PUT) {
     formData.append("_method", "PUT");
+  }
+  if (upper === RequestMethod.PATCH) {
+    formData.append("_method", "PATCH");
   }
 
   // Recursively append data to FormData

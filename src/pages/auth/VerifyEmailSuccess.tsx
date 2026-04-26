@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle } from "iconoir-react";
 import { useAuthStore } from "@/store";
 import { useAuth } from "@/features/auth";
 import { getDashboardPath } from "@/data/models/User";

@@ -1,5 +1,5 @@
 import { useNavigate, Link } from "react-router-dom";
-import { Home, ArrowLeft } from "lucide-react";
+import { HomeSimple, NavArrowLeft } from "iconoir-react";
 
 /**
  * 404 Not Found Page
@@ -26,14 +26,14 @@ const NotFoundPage = () => {
             onClick={() => navigate(-1)}
             className="inline-flex items-center gap-2 rounded-lg border border-border bg-card px-6 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
-            <ArrowLeft className="h-4 w-4" />
+            <NavArrowLeft className="h-4 w-4" />
             Go Back
           </button>
           <Link
             to="/"
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-active"
           >
-            <Home className="h-4 w-4" />
+            <HomeSimple className="h-4 w-4" />
             Go to Home
           </Link>
         </div>
