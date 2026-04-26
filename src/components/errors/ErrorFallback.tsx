@@ -1,5 +1,5 @@
 import { FallbackProps } from "react-error-boundary";
-import { AlertTriangle, RefreshCw } from "lucide-react";
+import { WarningTriangle, Refresh } from "iconoir-react";
 
 /**
  * Error Fallback Component
@@ -13,8 +13,8 @@ const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
       <div className="text-center">
         {/* Icon */}
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-danger/10">
-          <AlertTriangle className="h-10 w-10 text-danger" />
-        </div>
+          <WarningTriangle className="h-10 w-10 text-danger" />
+        </div>ß
 
         {/* Message */}
         <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>
@@ -40,7 +40,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
             onClick={resetErrorBoundary}
             className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-active"
           >
-            <RefreshCw className="h-4 w-4" />
+            <Refresh className="h-4 w-4" />
             Try Again
           </button>
           <a

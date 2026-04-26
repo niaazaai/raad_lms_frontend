@@ -24,11 +24,12 @@ Browser → Host Nginx (HTTPS, security headers, routing)
 - React Router v7 (routing with lazy loading)
 - Apisauce (HTTP client wrapping Axios)
 - Sonner (toast notifications)
-- Lucide React (icons)
+- Iconoir React (`iconoir-react` — SVG icon set; [iconoir.com](https://iconoir.com))
+- Shared loading indicator: `Spinner` in `src/components/ui/spinner.tsx` (use inside buttons and full-page loaders instead of a third-party spinner icon)
 - date-fns (date formatting)
 
 **App area:**
-- **Dashboard (protected)** — `MainLayout` (sidebar + header). Routes: `/dashboard`, `/settings`, `/users/*`, `/roles/*`, `/permissions/*`. Permission-gated via `ProtectedRoute`; config in `ProtectedRoutes.tsx` and `Routes.ts`. Unauthenticated users hit **Auth** routes (`/login`, `/register`, email verification) then land in the dashboard after login. **`getDashboardPath(user.type)` always returns `"/dashboard"`** — there is a single dashboard; `UserType` is only `"admin"` | `"user"`.
+- **Dashboard (protected)** — `MainLayout` (sidebar + header). Routes include `/dashboard`, `/settings`, `/users/*`, `/roles/*`, `/permissions/*`, and **Course hub** routes under `/courses/*` (catalog entities, DataTables, drawers). Permission-gated via `ProtectedRoute`; config in `ProtectedRoutes.tsx` and `Routes.ts`. Unauthenticated users hit **Auth** routes (`/login`, `/register`, email verification) then land in the dashboard after login. **`getDashboardPath(user.type)` always returns `"/dashboard"`** — one dashboard for all signed-in types; `UserType` is `"admin"` | `"student"` | `"instructor"` (see `src/data/models/User.ts`).
 
 ---
 
@@ -54,7 +55,8 @@ src/
 ├── lib/                         # Utility functions (cn, formatDate, etc.)
 ├── modules/                     # Feature modules (self-contained)
 │   ├── UserManagement/          # Users, roles, permissions: lists, forms, hooks, routes
-│   └── Notifications/         # In-app notifications (hooks, components as applicable)
+│   ├── Course/                  # Course catalog: hub, entity lists, form drawers, hooks, sidebar icon map
+│   └── Notifications/           # In-app notifications (hooks, components)
 ├── pages/                       # Top-level pages
 │   ├── auth/                    # Login, Register, VerifyEmail, VerifyEmailSuccess, VerifyEmailExpired
 │   ├── errors/                  # NotFound, Unauthorized
@@ -89,7 +91,7 @@ Every component follows this structure:
 import { useState } from "react";
 import { useAuth } from "@/features/auth";
 import { Button, Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
-import { SomeIcon } from "lucide-react";
+import { SomeIcon } from "iconoir-react";
 
 interface MyComponentProps {
   title: string;
@@ -153,7 +155,7 @@ export default MyFeaturePage;
 ### 3. State Management (Zustand)
 
 **Global stores (single entry: `src/store/index.ts`):**
-- **auth** — user, `type` (`"admin"` | `"user"`), permissions, login/logout, fetchUser (hydrated from `/api/v1/auth/me` using Sanctum session cookie). Persist key (if used): `raad-lms-auth` or as configured in the store.
+- **auth** — user, `type` (`"admin"` | `"student"` | `"instructor"`), permissions, login/logout, fetchUser (hydrated from `/api/v1/auth/me` using Sanctum session cookie). Persist key (if used): `raad-lms-auth` or as configured in the store.
 - **layout** — theme, sidebar, screen size (persist: `raad-lms-layout` — e.g. themeMode, userSettings)
 - **errors** — global error list / toasts
 
@@ -388,7 +390,7 @@ const CreateMyItemForm = ({ onSuccess }: CreateMyItemFormProps) => {
 
 ### 9. Routing, User Types & Permissions
 
-**`UserType`:** Only `"admin"` | `"user"`. There is no per-type dashboard path branching beyond permissions — **`getDashboardPath` always returns `"/dashboard"`**.
+**`UserType`:** `"admin"` | `"student"` | `"instructor"`. There is no per-type dashboard path branching — **`getDashboardPath` always returns `"/dashboard"`**; access to admin course tools is enforced with permissions (e.g. `course.*`).
 
 **Route architecture (aligned with central config + helpers):**
 
@@ -488,6 +490,7 @@ const handleDelete = async (id: number) => {
 **Usage pattern:**
 
 ```tsx
+import { EditPencil, Trash } from "iconoir-react";
 import { DataTable, useConfirmDialog, confirmPresets } from "@/components/ui";
 import { useDataTableParams } from "@/hooks";
 import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
@@ -543,8 +546,8 @@ const MyListPage = () => {
     paginationEnabled: true,
     emptyMessage: "No records found.",
     actions: [
-      { key: "edit", label: "Edit", icon: <Edit />, onClick: (row) => navigate(`/items/${row.id}/edit`) },
-      { key: "delete", label: "Delete", icon: <Trash2 />, variant: "danger", onClick: handleDelete },
+      { key: "edit", label: "Edit", icon: <EditPencil />, onClick: (row) => navigate(`/items/${row.id}/edit`) },
+      { key: "delete", label: "Delete", icon: <Trash />, variant: "danger", onClick: handleDelete },
     ],
   };
 
@@ -640,14 +643,21 @@ Button variants: `default`, `destructive`, `outline`, `secondary`, `ghost`, `lin
 <Button loading={isPending}>Saving...</Button>
 ```
 
-### Icons
+### Icons & loading
 
-Prefer `lucide-react`. Size: `h-4 w-4` (small), `h-5 w-5` (default), `h-6 w-6` (large). Use custom SVG when lucide lacks the icon (e.g. X / Twitter logo).
+- **Icons:** Use **`iconoir-react`** only (Lucide is not a dependency). Size: `h-4 w-4` (small), `h-5 w-5` (default), `h-6 w-6` (large). Look up exact component names on [iconoir.com](https://iconoir.com) — they differ from Lucide (e.g. `EditPencil` not `Pencil`, `Trash` not `Trash2`, `NavArrowRight` / `NavArrowLeft` for chevrons, `EyeClosed` for hidden password, `FloppyDisk` for save, `ViewGrid` for grid layout toggle, `MoreVert` for overflow menu, `Group` for “users” clusters, `DoubleCheck` for “mark all read”, `Xmark` for close/cancel).
+- **Loading:** Use **`import { Spinner } from "@/components/ui/spinner"`** (or `@/components/ui` if re-exported). Do not use `animate-spin` on raw icon components for primary loading states unless there is no alternative.
+- **Name clashes:** If a Tiptap extension and an icon share a name (e.g. `Link`), import the extension under another symbol (e.g. `TiptapLink`) and import the icon as `Link as LinkIcon` from `iconoir-react`.
 
 ```tsx
-import { Plus, Pencil, Trash2, Search, ChevronRight } from "lucide-react";
+import { Plus, EditPencil, Trash, Search, NavArrowRight, FloppyDisk } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
+
 <Button><Plus className="h-4 w-4" /> Add</Button>
+<Button disabled={pending}>{pending ? <Spinner className="h-4 w-4" /> : <FloppyDisk className="h-4 w-4" />} Save</Button>
 ```
+
+**Course entity sidebar icons:** `src/modules/Course/data/courseEntitySidebarIcons.tsx` maps API entity keys to Iconoir components; use type `React.ComponentType<React.SVGProps<SVGSVGElement>>` for the values so TypeScript accepts Iconoir’s `forwardRef` components.
 
 ---
 
@@ -700,7 +710,7 @@ Production URL examples: `https://your-domain.com` for the SPA, `https://your-do
    - `routes/index.tsx` — route definitions with permissions (use `ProtectedRouteType` from `@/types/routes`; optionally use `getCreateRoute` / `getShowRoute` from `@/utils/routeHandling` for path consistency)
 3. Register routes in `src/routes/ProtectedRoutes.tsx` (spread `...MyFeatureRoutes`)
 4. Add the module to the central aggregate in `src/routes/Routes.ts` (e.g. `myFeature: MyFeatureRoutes`)
-5. Add sidebar link in `src/layouts/components/Sidebar.tsx`
+5. Add sidebar link in `src/layouts/components/Sidebar.tsx` (and for course catalog entities, register icons in `src/modules/Course/data/courseEntitySidebarIcons.tsx` if applicable)
 
 All new features are **protected dashboard modules** under `MainLayout`. There is no separate public marketing site in this template.
 
@@ -708,6 +718,7 @@ All new features are **protected dashboard modules** under `MainLayout`. There i
 
 ## DO NOT
 
+- Add or use **`lucide-react`** (icons are **Iconoir** only)
 - Use `any` type (use `unknown` or proper types)
 - Use `fetch()` or `axios` directly (use `callApi`)
 - Put server state in Zustand (use React Query)

@@ -2,7 +2,8 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
 import { getDashboardPath } from "@/data/models/User";
@@ -122,7 +123,7 @@ const LoginWith2FA = () => {
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Verifying...
             </span>
           ) : (

@@ -1,11 +1,7 @@
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import {
-  Users,
-  Shield,
-  ArrowRight,
-  Loader2,
-} from "lucide-react";
+import { Group, Shield, NavArrowRight } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth";
 import { useDashboardStats } from "@/hooks";
 
@@ -63,7 +59,7 @@ const DashboardPage = () => {
                   key={i}
                   className="flex h-32 items-center justify-center rounded-xl border border-border bg-card"
                 >
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                  <Spinner className="h-8 w-8 text-muted-foreground" />
                 </div>
               ))}
             </div>
@@ -73,7 +69,7 @@ const DashboardPage = () => {
                 <StatCard
                   title="Active Users"
                   value={String(stats.active_users_count ?? 0)}
-                  icon={<Users className="h-5 w-5" />}
+                  icon={<Group className="h-5 w-5" />}
                   color="primary"
                 />
               )}
@@ -81,7 +77,7 @@ const DashboardPage = () => {
                 <StatCard
                   title="Total Users"
                   value={String(stats.total_users_count ?? 0)}
-                  icon={<Users className="h-5 w-5" />}
+                  icon={<Group className="h-5 w-5" />}
                   color="info"
                 />
               )}
@@ -94,7 +90,7 @@ const DashboardPage = () => {
               <div className="flex flex-wrap gap-3">
                 {hasUsersPermission && (
                   <QuickAction
-                    icon={<Users className="h-4 w-4" />}
+                    icon={<Group className="h-4 w-4" />}
                     label="Manage Users"
                     href="/users"
                   />
@@ -165,7 +161,7 @@ const QuickAction = ({ icon, label, href }: QuickActionProps) => (
       {icon}
     </div>
     <span className="text-sm font-medium text-foreground">{label}</span>
-    <ArrowRight className="h-4 w-4 text-muted-foreground" />
+    <NavArrowRight className="h-4 w-4 text-muted-foreground" />
   </Link>
 );
 

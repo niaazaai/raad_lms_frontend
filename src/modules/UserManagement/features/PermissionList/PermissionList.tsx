@@ -1,12 +1,6 @@
 import { useState, useMemo } from "react";
-import {
-  Search,
-  Key,
-  Shield,
-  Loader2,
-  LayoutGrid,
-  List,
-} from "lucide-react";
+import { Search, Key, Shield, ViewGrid, List } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { usePermissions } from "../../hooks";
 import { Permission } from "../../data/models";
 import { DataTable } from "@/components/ui";
@@ -116,7 +110,7 @@ const PermissionList = () => {
   if (isLoading) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }
@@ -145,7 +139,7 @@ const PermissionList = () => {
             )}
             title="Card view"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <ViewGrid className="h-4 w-4" />
           </button>
           <button
             onClick={() => setViewMode("table")}

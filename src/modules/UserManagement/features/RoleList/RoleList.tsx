@@ -4,15 +4,15 @@ import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
   Search,
-  Edit,
-  Trash2,
+  EditPencil,
+  Trash,
   Shield,
-  Users,
+  Group,
   Key,
-  LayoutGrid,
+  ViewGrid,
   List,
-  MoreVertical,
-} from "lucide-react";
+  MoreVert,
+} from "iconoir-react";
 import { useRoles, useDeleteRole, useDeleteRoleMutation } from "../../hooks";
 import { Role } from "../../data/models";
 import {
@@ -132,7 +132,7 @@ const RoleList = () => {
       {
         key: "edit",
         label: "Edit",
-        icon: <Edit className="h-4 w-4" />,
+        icon: <EditPencil className="h-4 w-4" />,
         onClick: (role) => {
           if (!["admin", "root", "student", "instructor"].includes(role.name.toLowerCase())) {
             navigate(`/roles/${role.id}/edit`);
@@ -143,7 +143,7 @@ const RoleList = () => {
       {
         key: "delete",
         label: "Delete",
-        icon: <Trash2 className="h-4 w-4" />,
+        icon: <Trash className="h-4 w-4" />,
         variant: "danger",
         onClick: async (role) => {
           if (!["admin", "root", "student", "instructor"].includes(role.name.toLowerCase())) {
@@ -177,7 +177,7 @@ const RoleList = () => {
               )}
               title="Card view"
             >
-              <LayoutGrid className="h-4 w-4" />
+              <ViewGrid className="h-4 w-4" />
             </button>
             <button
               onClick={() => setViewMode("table")}
@@ -314,7 +314,7 @@ const RoleCard = ({ role, viewMode }: RoleCardProps) => {
                 onClick={() => setShowMenu(!showMenu)}
                 className="rounded-lg p-1 hover:bg-muted"
               >
-                <MoreVertical className="h-4 w-4" />
+                <MoreVert className="h-4 w-4" />
               </button>
               {showMenu && (
                 <>
@@ -326,7 +326,7 @@ const RoleCard = ({ role, viewMode }: RoleCardProps) => {
                         state={{ fromView: viewMode }}
                         className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted"
                       >
-                        <Edit className="h-4 w-4" />
+                        <EditPencil className="h-4 w-4" />
                         Edit
                       </Link>
                     </Can>
@@ -336,7 +336,7 @@ const RoleCard = ({ role, viewMode }: RoleCardProps) => {
                         disabled={isDeleting}
                         className="flex w-full items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-muted"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash className="h-4 w-4" />
                         Delete
                       </button>
                     </Can>
@@ -351,7 +351,7 @@ const RoleCard = ({ role, viewMode }: RoleCardProps) => {
       <div className="grid grid-cols-2 gap-4">
         <div className="rounded-lg bg-muted/50 p-3">
           <div className="flex items-center gap-2 text-muted-foreground">
-            <Users className="h-4 w-4" />
+            <Group className="h-4 w-4" />
             <span className="text-xs">Users</span>
           </div>
           <p className="mt-1 text-lg font-semibold text-foreground">{role.users_count || 0}</p>

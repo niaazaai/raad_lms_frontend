@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
-import { CheckCheck, Loader2 } from "lucide-react";
+import { DoubleCheck } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import {
   useNotifications,
   useUnreadNotificationCount,
@@ -59,9 +60,9 @@ const NotificationDropdown = ({ isOpen, onClose, anchorRef }: NotificationDropdo
             className="flex items-center gap-1 text-xs text-primary hover:text-primary-active"
           >
             {markAllRead.isPending ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
+              <Spinner className="h-3 w-3" />
             ) : (
-              <CheckCheck className="h-3 w-3" />
+              <DoubleCheck className="h-3 w-3" />
             )}
             Mark all read
           </button>
@@ -71,7 +72,7 @@ const NotificationDropdown = ({ isOpen, onClose, anchorRef }: NotificationDropdo
       <div className="max-h-80 overflow-y-auto">
         {isLoading ? (
           <div className="flex justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            <Spinner className="h-6 w-6 text-muted-foreground" />
           </div>
         ) : notifications.length === 0 ? (
           <div className="px-4 py-8 text-center text-sm text-muted-foreground">

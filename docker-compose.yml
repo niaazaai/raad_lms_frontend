@@ -6,13 +6,13 @@ services:
       args:
         VITE_APP_NAME: ${VITE_APP_NAME:-Raad LMS}
         VITE_APP_URL: ${VITE_APP_URL:-http://127.0.0.1}
-    image: raad-lms-frontend:${APP_IMAGE_TAG:-local}
-    container_name: raad-lms-frontend
+    image: raad-frontend:${APP_IMAGE_TAG:-local}
+    container_name: raad-frontend
     ports:
       - "127.0.0.1:3000:80"
     restart: unless-stopped
     networks:
-      - raad-lms-network
+      - raad-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/"]
       interval: 30s
@@ -21,5 +21,5 @@ services:
       start_period: 10s
 
 networks:
-  raad-lms-network:
+  raad-network:
     external: true

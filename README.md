@@ -14,7 +14,7 @@ React 19 + TypeScript SPA with Vite, Tailwind CSS v4, and shadcn/ui.
 - **React Router v7** (routing with lazy loading)
 - **Apisauce** (HTTP client)
 - **Sonner** (toast notifications)
-- **Lucide React** (icons)
+- **Iconoir React** (icons) + shared **`Spinner`** component for loading states
 
 ## Features Included
 
@@ -25,6 +25,7 @@ React 19 + TypeScript SPA with Vite, Tailwind CSS v4, and shadcn/ui.
 - User management (CRUD with DataTable)
 - Role management (CRUD)
 - Permission management (read-only)
+- Course catalog hub (categories, courses, lessons, subscriptions, classes, etc.) with permission-gated admin UI
 - Settings page
 - Dark mode support
 - Responsive sidebar navigation

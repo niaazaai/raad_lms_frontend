@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { Label } from "@/components/ui";
-import { FileText, Upload, X } from "lucide-react";
+import { Page, Upload, Xmark } from "iconoir-react";
 
 export interface MultiImageDropzoneProps {
   accept: string;
@@ -50,7 +50,7 @@ const MultiImageDropzone = ({
           <div key={idx} className="relative">
             {file.type === "application/pdf" ? (
               <div className="flex h-20 w-20 flex-col items-center justify-center gap-0.5 rounded-lg border border-border bg-muted/30">
-                <FileText className="h-6 w-6 text-muted-foreground" />
+                <Page className="h-6 w-6 text-muted-foreground" />
                 <span className="text-[10px] text-foreground truncate max-w-full px-1">
                   {file.name}
                 </span>
@@ -67,7 +67,7 @@ const MultiImageDropzone = ({
               onClick={() => removeAt(idx)}
               className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-danger text-white"
             >
-              <X className="h-3 w-3" />
+              <Xmark className="h-3 w-3" />
             </button>
           </div>
         ))}

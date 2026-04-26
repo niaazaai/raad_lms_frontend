@@ -1,4 +1,4 @@
-import { Menu, Bell, User, LogOut, Settings, Sun, Moon, RefreshCw } from "lucide-react";
+import { Menu, Bell, User, LogOut, Settings, SunLight, MoonSat, Refresh } from "iconoir-react";
 import { useLayoutStore } from "@/store";
 import { useAuth } from "@/features/auth";
 import { ThemeMode } from "@/data/enums";
@@ -71,7 +71,7 @@ const Header = () => {
     <header
       className={cn(
         "fixed right-0 top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card px-4 transition-all duration-300",
-        sidebarCollapsed ? "lg:left-20" : "lg:left-64"
+        sidebarCollapsed ? "lg:left-[4.25rem]" : "lg:left-52"
       )}
     >
       {/* Left Section */}
@@ -104,9 +104,9 @@ const Header = () => {
           aria-label="Toggle theme"
         >
           {theme === ThemeMode.DARK ? (
-            <Sun className="h-5 w-5" />
+            <SunLight className="h-5 w-5" />
           ) : (
-            <Moon className="h-5 w-5" />
+            <MoonSat className="h-5 w-5" />
           )}
         </button>
 
@@ -164,7 +164,7 @@ const Header = () => {
                   disabled={isRefreshing}
                   className="flex w-full items-center gap-3 px-4 py-2 text-sm hover:bg-muted"
                 >
-                  <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+                  <Refresh className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
                   {isRefreshing ? "Refreshing..." : "Sync Permissions"}
                 </button>
                 <a

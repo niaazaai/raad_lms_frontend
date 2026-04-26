@@ -2,17 +2,16 @@
 
 import * as React from "react";
 import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
+  NavArrowDown,
+  NavArrowLeft,
+  NavArrowRight,
   Filter,
-  Loader2,
-  MoreHorizontal,
+  MoreHoriz,
   Search,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-} from "lucide-react";
+  ArrowSeparateVertical,
+  NavArrowUp,
+} from "iconoir-react";
+import { Spinner } from "./spinner";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -67,9 +66,9 @@ function ColumnHeader<T>({
 
   const SortIcon = isSorted
     ? params.sort_dir === "asc"
-      ? ArrowUp
-      : ArrowDown
-    : ArrowUpDown;
+      ? NavArrowUp
+      : NavArrowDown
+    : ArrowSeparateVertical;
 
   return (
     <th
@@ -147,7 +146,7 @@ function ActionsCell<T>({
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon-sm" aria-label="Actions">
-            <MoreHorizontal className="h-4 w-4" />
+            <MoreHoriz className="h-4 w-4" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
@@ -272,7 +271,7 @@ export function DataTable<T>({
                   colSpan={columns.length + (hasActions ? 1 : 0)}
                   className="px-4 py-16 text-center"
                 >
-                  <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary" />
+                  <Spinner className="mx-auto h-8 w-8 text-primary" />
                 </td>
               </tr>
             ) : data.length === 0 ? (
@@ -323,7 +322,7 @@ export function DataTable<T>({
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm">
                   {perPage} per page
-                  <ChevronDown className="ml-1 h-4 w-4" />
+                  <NavArrowDown className="ml-1 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
@@ -345,7 +344,7 @@ export function DataTable<T>({
               onClick={() => onParamsChange({ page: currentPage - 1 })}
               disabled={currentPage <= 1}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <NavArrowLeft className="h-4 w-4" />
               Previous
             </Button>
             <span className="text-sm text-muted-foreground">
@@ -358,7 +357,7 @@ export function DataTable<T>({
               disabled={currentPage >= totalPages}
             >
               Next
-              <ChevronRight className="h-4 w-4" />
+              <NavArrowRight className="h-4 w-4" />
             </Button>
           </div>
         </div>

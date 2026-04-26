@@ -41,7 +41,7 @@ help:
 # =============================================================================
 up:
 	@$(ECHO) "$(BOLD)Building and starting frontend...$(RESET)"
-	@docker network inspect raad-lms-network >/dev/null 2>&1 || docker network create raad-lms-network
+	@docker network inspect raad-network >/dev/null 2>&1 || docker network create raad-network
 	@$(COMPOSE) build --pull
 	@$(COMPOSE) up -d --build --remove-orphans
 	@$(ECHO) "$(GREEN)SPA is proxied on port 80 (host nginx). Container: 127.0.0.1:3000$(RESET)"
@@ -94,9 +94,9 @@ ps:
 # =============================================================================
 health:
 	@$(ECHO) "$(BOLD)Frontend container$(RESET)"
-	@docker ps --filter name=raad-lms-frontend --format '{{.Status}}' | grep -q . \
-		&& $(ECHO) "   $(GREEN)raad-lms-frontend: running$(RESET)" \
-		|| ($(ECHO) "   $(RED)raad-lms-frontend: not running (run: make up)$(RESET)" && exit 1)
+	@docker ps --filter name=raad-frontend --format '{{.Status}}' | grep -q . \
+		&& $(ECHO) "   $(GREEN)raad-frontend: running$(RESET)" \
+		|| ($(ECHO) "   $(RED)raad-frontend: not running (run: make up)$(RESET)" && exit 1)
 	@code=$$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/ 2>/dev/null); \
 	if [ "$$code" = "200" ]; then $(ECHO) "   $(GREEN)http://localhost:3000 → 200 OK$(RESET)"; \
 	else $(ECHO) "   $(RED)http://localhost:3000 → HTTP $$code$(RESET)" && exit 1; fi

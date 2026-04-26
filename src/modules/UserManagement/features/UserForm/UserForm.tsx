@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2, Save, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, FloppyDisk, Eye, EyeClosed } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useUser, useCreateUser, useUpdateUser, useRoles } from "../../hooks";
 import { CreateUserSchema, UpdateUserSchema } from "../../data/models";
@@ -95,7 +96,7 @@ const UserForm = ({ mode = "create" }: UserFormProps) => {
   if (isEdit && isLoadingUser) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }
@@ -173,7 +174,7 @@ const UserForm = ({ mode = "create" }: UserFormProps) => {
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  {showPassword ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
               {errors.password && (
@@ -237,12 +238,12 @@ const UserForm = ({ mode = "create" }: UserFormProps) => {
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner className="h-4 w-4" />
                 {isEdit ? "Updating..." : "Creating..."}
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
+                <FloppyDisk className="h-4 w-4" />
                 {isEdit ? "Update User" : "Create User"}
               </>
             )}

@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Shield, Loader2 } from "lucide-react";
+import { Shield } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth";
 import { callApi, fetchCsrfCookie } from "@/services";
 import { API_ENDPOINTS } from "@/data/constants/endpoints";
@@ -153,7 +154,7 @@ const SettingsPage = () => {
                       className="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white hover:bg-danger/90"
                     >
                       {disableForm.formState.isSubmitting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Spinner className="h-4 w-4" />
                       ) : (
                         "Disable 2FA"
                       )}
@@ -195,7 +196,7 @@ const SettingsPage = () => {
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-active"
                 >
                   {enableForm.formState.isSubmitting ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Spinner className="h-4 w-4" />
                   ) : (
                     "Confirm"
                   )}

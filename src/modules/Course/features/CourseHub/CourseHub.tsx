@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
-import { BookOpen, ChevronRight } from "lucide-react";
+import { BookStack, NavArrowRight } from "iconoir-react";
 import { COURSE_ENTITY_REGISTRY, COURSE_ENTITY_SLUGS } from "../../data/courseRegistry";
-import { useAuth } from "@/features/auth";
+import { PermissionDeniedCard, useAuth } from "@/features/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 
 const CourseHub = () => {
@@ -14,17 +14,18 @@ const CourseHub = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center gap-3">
-        <BookOpen className="text-primary h-8 w-8" />
+        <BookStack className="text-primary h-8 w-8 stroke-[1.5]" />
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Course module</h1>
-          <p className="text-muted-foreground text-sm">
-            Admin tools for categories, courses, lessons, subscriptions, and classes.
+          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+            Run your ACCA catalogue end to end—categories, commercial terms, content delivery, and cohorts
+            in one place.
           </p>
         </div>
       </div>
 
       {visible.length === 0 ? (
-        <p className="text-muted-foreground text-sm">You do not have permission to view course admin data.</p>
+        <PermissionDeniedCard />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {visible.map((slug) => {
@@ -34,10 +35,10 @@ const CourseHub = () => {
                 <Card className="hover:border-primary/40 h-full transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base font-semibold">{cfg.title}</CardTitle>
-                    <ChevronRight className="text-muted-foreground h-4 w-4" />
+                    <NavArrowRight className="text-muted-foreground h-4 w-4" />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground font-mono text-xs">{cfg.apiPath}</p>
+                    <p className="text-muted-foreground text-sm leading-snug">{cfg.pageDescription}</p>
                   </CardContent>
                 </Card>
               </Link>

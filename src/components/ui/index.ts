@@ -1,4 +1,5 @@
 // Export UI components
+export { Spinner } from "./spinner";
 export { Button, buttonVariants } from "./button";
 export { Input } from "./input";
 export { Label } from "./label";

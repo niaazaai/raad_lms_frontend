@@ -1,7 +1,8 @@
 import { useMemo, useState, useCallback } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { Ban, CircleCheck, Eye, Pencil, Plus, Trash2 } from "lucide-react";
+import { Prohibition, CheckCircle, Eye, EditPencil, Plus, Trash } from "iconoir-react";
 import { toast } from "sonner";
+import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import {
   useCourseEntityList,
   useDeleteCourseEntity,
@@ -30,15 +31,25 @@ import {
   useConfirmDialog,
   confirmPresets,
 } from "@/components/ui";
-import { Can, useAuth } from "@/features/auth";
+import { Can, PermissionDeniedCard, useAuth } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
 import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 
-const TableLoader = () => (
-  <div className="flex min-h-[240px] items-center justify-center">
-    <div className="border-primary h-10 w-10 animate-spin rounded-full border-4 border-t-transparent" />
-  </div>
-);
+const RELATIVE_DATE_KEYS = new Set([
+  "created_at",
+  "updated_at",
+  "uploaded_at",
+  "issue_date",
+  "purchase_date",
+  "enrollment_date",
+  "approval_date",
+  "subscription_start_date",
+  "subscription_end_date",
+  "start_date",
+  "end_date",
+  "instructor_feedback_date",
+  "closed_at",
+]);
 
 function isSlug(value: string | undefined): value is CourseEntitySlug {
   return !!value && (COURSE_ENTITY_SLUGS as string[]).includes(value);
@@ -91,7 +102,7 @@ const CourseEntityList = () => {
     ...extraParams,
   };
 
-  const { data, isLoading, error } = useCourseEntityList(resolvedSlug, apiParams);
+  const { data, isFetching, error } = useCourseEntityList(resolvedSlug, apiParams);
   const rows = resolvedSlug ? getCourseListFromResponse(data) : [];
   const pagination = getPaginationFromResponse(data);
 
@@ -155,6 +166,9 @@ const CourseEntityList = () => {
           render: (row: CourseRow) => {
             const v = row[key];
             if (v === null || v === undefined) return "—";
+            if (RELATIVE_DATE_KEYS.has(key) && (typeof v === "string" || typeof v === "number")) {
+              return formatRelativeTime(String(v));
+            }
             if (typeof v === "object") return JSON.stringify(v);
             return String(v);
           },
@@ -198,7 +212,7 @@ const CourseEntityList = () => {
                     }}
                     aria-label="Edit row"
                   >
-                    <Pencil className="h-4 w-4" />
+                    <EditPencil className="h-4 w-4" />
                   </Button>
                 </Can>
                 {statusToggle ? (
@@ -218,7 +232,6 @@ const CourseEntityList = () => {
                         patchEntity(
                           { id: numericId, body: { [statusToggle.field]: nextVal } },
                           {
-                            onSuccess: () => toast.success("Status updated"),
                             onError: (e: unknown) =>
                               toast.error(e instanceof Error ? e.message : "Update failed"),
                           }
@@ -231,9 +244,9 @@ const CourseEntityList = () => {
                       }
                     >
                       {String(row[statusToggle.field] ?? "") === statusToggle.activeValue ? (
-                        <Ban className="text-muted-foreground h-4 w-4" />
+                        <Prohibition className="text-muted-foreground h-4 w-4" />
                       ) : (
-                        <CircleCheck className="h-4 w-4 text-green-600" />
+                        <CheckCircle className="h-4 w-4 text-green-600" />
                       )}
                     </Button>
                   </Can>
@@ -252,7 +265,7 @@ const CourseEntityList = () => {
                     }}
                     aria-label="Delete row"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Trash className="h-4 w-4 text-destructive" />
                   </Button>
                 </Can>
               </div>
@@ -285,15 +298,7 @@ const CourseEntityList = () => {
   }
 
   if (!hasPermission(cfg.permission)) {
-    return (
-      <div className="p-6">
-        <p className="text-muted-foreground">You do not have permission to view this dataset.</p>
-      </div>
-    );
-  }
-
-  if (isLoading) {
-    return <TableLoader />;
+    return <PermissionDeniedCard />;
   }
 
   if (error) {
@@ -319,14 +324,11 @@ const CourseEntityList = () => {
             ← Course module
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
-          <p className="text-muted-foreground text-sm">
-            Create, view, edit, enable or disable, and delete records for{" "}
-            <code className="text-xs">{cfg.apiPath}</code>
-          </p>
+          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">{cfg.pageDescription}</p>
         </div>
         <Can permission={createPerm}>
           <Button type="button" onClick={openCreateDrawer} className="shrink-0 gap-2">
-            <Plus className="h-4 w-4" />
+            <Plus className="h-4 w-4 stroke-[1.5]" />
             Add new
           </Button>
         </Can>
@@ -374,7 +376,7 @@ const CourseEntityList = () => {
         params={params}
         onParamsChange={updateParams}
         pagination={pagination}
-        isLoading={isLoading}
+        isLoading={isFetching}
       />
 
       <Drawer open={drawerOpen} onClose={closeDrawer}>

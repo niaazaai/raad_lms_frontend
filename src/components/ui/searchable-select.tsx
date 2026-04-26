@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { NavArrowDown } from "iconoir-react";
 import { Button } from "./button";
 import { Input } from "./input";
 import { Label } from "./label";
@@ -92,7 +92,7 @@ const SearchableSelect = ({
         <span className={cn("truncate", !selectedLabel && "text-muted-foreground")}>
           {selectedLabel ?? placeholder}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+        <NavArrowDown className="h-4 w-4 shrink-0 opacity-60" />
       </Button>
       {open && (
         <div

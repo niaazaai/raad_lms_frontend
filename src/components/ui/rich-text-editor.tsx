@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
-import Link from "@tiptap/extension-link";
+import TiptapLink from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import {
@@ -11,20 +11,20 @@ import {
   Italic,
   Strikethrough,
   List,
-  ListOrdered,
+  NumberedListLeft,
   Quote,
-  Heading1,
-  Heading2,
-  Heading3,
-  Link2,
-  ImagePlus,
+  Number1Square,
+  Number2Square,
+  Number3Square,
+  Link as LinkIcon,
+  MediaImagePlus,
   Minus,
   Undo,
   Redo,
-} from "lucide-react";
+} from "iconoir-react";
 import { cn } from "@/lib/utils";
 
-const linkExtension = Link.configure({
+const linkExtension = TiptapLink.configure({
   openOnClick: false,
   HTMLAttributes: {
     class: "text-primary underline hover:text-primary-active",
@@ -162,21 +162,21 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             active={editor.isActive("bold")}
             aria-label="Bold"
           >
-            <Bold className="h-4 w-4" />
+            <Bold className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleItalic().run()}
             active={editor.isActive("italic")}
             aria-label="Italic"
           >
-            <Italic className="h-4 w-4" />
+            <Italic className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleStrike().run()}
             active={editor.isActive("strike")}
             aria-label="Strikethrough"
           >
-            <Strikethrough className="h-4 w-4" />
+            <Strikethrough className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
 
           <span className="mx-1 h-5 w-px bg-border" />
@@ -186,21 +186,21 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             active={editor.isActive("heading", { level: 1 })}
             aria-label="Heading 1"
           >
-            <Heading1 className="h-4 w-4" />
+            <Number1Square className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             active={editor.isActive("heading", { level: 2 })}
             aria-label="Heading 2"
           >
-            <Heading2 className="h-4 w-4" />
+            <Number2Square className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             active={editor.isActive("heading", { level: 3 })}
             aria-label="Heading 3"
           >
-            <Heading3 className="h-4 w-4" />
+            <Number3Square className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
 
           <span className="mx-1 h-5 w-px bg-border" />
@@ -210,21 +210,21 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             active={editor.isActive("bulletList")}
             aria-label="Bullet list"
           >
-            <List className="h-4 w-4" />
+            <List className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             active={editor.isActive("orderedList")}
             aria-label="Numbered list"
           >
-            <ListOrdered className="h-4 w-4" />
+            <NumberedListLeft className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             active={editor.isActive("blockquote")}
             aria-label="Blockquote"
           >
-            <Quote className="h-4 w-4" />
+            <Quote className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
 
           <span className="mx-1 h-5 w-px bg-border" />
@@ -234,16 +234,16 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             active={editor.isActive("link")}
             aria-label="Add link"
           >
-            <Link2 className="h-4 w-4" />
+            <LinkIcon className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton onClick={addImage} aria-label="Add image">
-            <ImagePlus className="h-4 w-4" />
+            <MediaImagePlus className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().setHorizontalRule().run()}
             aria-label="Horizontal rule"
           >
-            <Minus className="h-4 w-4" />
+            <Minus className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
 
           <span className="mx-1 h-5 w-px bg-border" />
@@ -253,14 +253,14 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
             disabled={!editor.can().undo()}
             aria-label="Undo"
           >
-            <Undo className="h-4 w-4" />
+            <Undo className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton
             onClick={() => editor.chain().focus().redo().run()}
             disabled={!editor.can().redo()}
             aria-label="Redo"
           >
-            <Redo className="h-4 w-4" />
+            <Redo className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
         </div>
 

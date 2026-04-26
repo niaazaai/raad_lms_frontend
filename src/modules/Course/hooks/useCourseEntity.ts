@@ -67,6 +67,9 @@ export function useDeleteCourseEntity(slug: CourseEntitySlug) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["course", "entity", slug] });
+      if (slug === "main-categories") {
+        queryClient.invalidateQueries({ queryKey: ["course", "form-meta"] });
+      }
     },
   });
 }
@@ -93,11 +96,13 @@ export function useCreateCourseEntity(slug: CourseEntitySlug) {
 
   return useMutation({
     mutationFn: async (body: Record<string, unknown>) => {
+      const hasFiles = Object.values(body).some((v) => v instanceof File);
       const response = await callApi<CourseRow>({
         url: cfg.apiPath,
         method: RequestMethod.POST,
         data: body,
         shouldPopError: false,
+        hasFiles,
       });
       if (!response.ok) {
         throw new Error(response.data?.message || "Create failed");
@@ -106,6 +111,9 @@ export function useCreateCourseEntity(slug: CourseEntitySlug) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["course", "entity", slug] });
+      if (slug === "main-categories") {
+        queryClient.invalidateQueries({ queryKey: ["course", "form-meta"] });
+      }
     },
   });
 }
@@ -116,11 +124,13 @@ export function useUpdateCourseEntity(slug: CourseEntitySlug) {
 
   return useMutation({
     mutationFn: async ({ id, body }: { id: number; body: Record<string, unknown> }) => {
+      const hasFiles = Object.values(body).some((v) => v instanceof File);
       const response = await callApi<CourseRow>({
         url: `${cfg.apiPath}/${id}`,
         method: RequestMethod.PATCH,
         data: body,
         shouldPopError: false,
+        hasFiles,
       });
       if (!response.ok) {
         throw new Error(response.data?.message || "Update failed");
@@ -130,7 +140,9 @@ export function useUpdateCourseEntity(slug: CourseEntitySlug) {
     onSuccess: (_data: unknown, vars: { id: number; body: Record<string, unknown> }) => {
       queryClient.invalidateQueries({ queryKey: ["course", "entity", slug] });
       queryClient.invalidateQueries({ queryKey: ["course", "entity", slug, "detail", vars.id] });
+      if (slug === "main-categories") {
+        queryClient.invalidateQueries({ queryKey: ["course", "form-meta"] });
+      }
     },
   });
 }
- 355

@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Loader2, Save, Eye, EyeOff, Camera } from "lucide-react";
+import { FloppyDisk, Eye, EyeClosed, Camera } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useUser, useCreateUser, useUpdateUser } from "../../hooks";
 import { z } from "zod";
 import type { UserManagement } from "../../data/models";
@@ -133,7 +134,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
         </DrawerHeader>
         <DrawerBody>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Spinner className="h-8 w-8 text-primary" />
           </div>
         </DrawerBody>
       </>
@@ -252,7 +253,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {showPassword ? <EyeClosed className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>
             {errors.password && (
@@ -283,12 +284,12 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
           <Button type="submit" form="user-form" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner className="h-4 w-4" />
                 {isEdit ? "Updating..." : "Creating..."}
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
+                <FloppyDisk className="h-4 w-4" />
                 {isEdit ? "Update User" : "Create User"}
               </>
             )}

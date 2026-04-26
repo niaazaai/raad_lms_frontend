@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { AlertCircle } from "lucide-react";
+import { WarningCircle } from "iconoir-react";
 
 const VerifyEmailExpiredPage = () => {
   return (
@@ -25,7 +25,7 @@ const VerifyEmailExpiredPage = () => {
         <section className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-sm md:p-8 text-center">
           <div className="mb-6 flex justify-center">
             <div className="flex h-16 w-16 items-center justify-center rounded-full bg-warning/10">
-              <AlertCircle className="h-10 w-10 text-warning" />
+              <WarningCircle className="h-10 w-10 text-warning" />
             </div>
           </div>
           <h2 className="text-xl font-semibold text-foreground">Link expired</h2>

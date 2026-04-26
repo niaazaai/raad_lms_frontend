@@ -1,20 +1,24 @@
-import { useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { Loader2, Save } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { useForm, Controller } from "react-hook-form";
+import { FloppyDisk } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import type { CourseEntitySlug } from "../../data/courseRegistry";
 import {
   COURSE_ENTITY_FORM_REGISTRY,
-  courseRowToFormValues,
+  courseRowToFormValuesForSlug,
   getCreateDefaultsForEntity,
+  getSerializeFieldsForSlug,
   serializeCourseEntityPayload,
 } from "../../data/courseEntityFormRegistry";
+import type { CourseEntityFormField } from "../../data/courseEntityFormRegistry";
 import {
   getCourseEntityDetailFromResponse,
   useCourseEntityDetail,
   useCreateCourseEntity,
   useUpdateCourseEntity,
 } from "../../hooks/useCourseEntity";
+import { useCourseFormMeta } from "../../hooks/useCourseFormMeta";
 import {
   Button,
   DrawerBody,
@@ -22,6 +26,12 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  ImageDropzone,
+  SearchableSelect,
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -42,12 +52,9 @@ const inputClass = cn(
   "focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
 );
 
-function validateRequired(
-  values: FormValues,
-  slug: CourseEntitySlug
-): string | null {
-  const def = COURSE_ENTITY_FORM_REGISTRY[slug];
-  for (const f of def.fields) {
+function validateRequired(values: FormValues, slug: CourseEntitySlug): string | null {
+  const fields = getSerializeFieldsForSlug(slug);
+  for (const f of fields) {
     if (!f.required) continue;
     const v = values[f.name];
     if (f.type === "checkbox") continue;
@@ -58,6 +65,78 @@ function validateRequired(
   return null;
 }
 
+function renderFieldControl(
+  f: CourseEntityFormField,
+  readOnly: boolean,
+  register: ReturnType<typeof useForm<FormValues>>["register"]
+) {
+  const id = `cef-${f.name}`;
+  if (f.type === "textarea") {
+    return (
+      <textarea
+        id={id}
+        className={cn(inputClass, "min-h-[88px]")}
+        disabled={readOnly}
+        placeholder={f.placeholder}
+        {...register(f.name)}
+      />
+    );
+  }
+  if (f.type === "json") {
+    return (
+      <textarea
+        id={id}
+        className={cn(inputClass, "min-h-[120px] font-mono text-xs")}
+        disabled={readOnly}
+        placeholder={f.placeholder}
+        {...register(f.name)}
+      />
+    );
+  }
+  if (f.type === "text" || f.type === "number") {
+    return (
+      <input
+        id={id}
+        type={f.type === "number" ? "number" : "text"}
+        step={f.type === "number" ? "any" : undefined}
+        className={inputClass}
+        disabled={readOnly}
+        placeholder={f.placeholder}
+        {...register(f.name)}
+      />
+    );
+  }
+  if (f.type === "date") {
+    return <input id={id} type="date" className={inputClass} disabled={readOnly} {...register(f.name)} />;
+  }
+  if (f.type === "select") {
+    return (
+      <select id={id} className={inputClass} disabled={readOnly} {...register(f.name)}>
+        <option value="">—</option>
+        {(f.options ?? []).map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+  if (f.type === "checkbox") {
+    return (
+      <input
+        id={id}
+        type="checkbox"
+        disabled={readOnly}
+        className="border-input h-4 w-4 rounded"
+        {...register(f.name)}
+      />
+    );
+  }
+  return null;
+}
+
+const THUMB_SLUGS: CourseEntitySlug[] = ["main-categories", "sub-categories"];
+
 const CourseEntityFormDrawer = ({
   slug,
   entityTitle,
@@ -67,32 +146,42 @@ const CourseEntityFormDrawer = ({
 }: CourseEntityFormDrawerProps) => {
   const def = COURSE_ENTITY_FORM_REGISTRY[slug];
   const readOnly = mode === "view";
+  const needsMeta = slug === "sub-categories";
+  const { data: metaRes, isLoading: metaLoading } = useCourseFormMeta(needsMeta ? "sub-categories" : null);
+  const meta = metaRes?.data;
+  const mainCategoryOptions = useMemo(() => {
+    const rows = meta?.main_categories ?? [];
+    return rows.map((r) => ({ value: String(r.id), label: `${r.title} (#${r.id})` }));
+  }, [meta]);
 
-  const { data: detailRes, isLoading: loadingDetail } = useCourseEntityDetail(
-    slug,
-    entityId,
-    { enabled: mode !== "create" && entityId != null }
-  );
+  const { data: detailRes, isLoading: loadingDetail } = useCourseEntityDetail(slug, entityId, {
+    enabled: mode !== "create" && entityId != null,
+  });
   const detail = getCourseEntityDetailFromResponse(detailRes);
 
   const { mutate: createEntity, isPending: creating } = useCreateCourseEntity(slug);
   const { mutate: updateEntity, isPending: updating } = useUpdateCourseEntity(slug);
   const submitting = creating || updating;
 
-  const { register, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: {},
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+
+  const { register, handleSubmit, reset, control } = useForm<FormValues>({
+    defaultValues: getCreateDefaultsForEntity(slug),
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
   });
 
   useEffect(() => {
-    const fields = COURSE_ENTITY_FORM_REGISTRY[slug].fields;
     if (mode === "create") {
       reset(getCreateDefaultsForEntity(slug));
+      setThumbnailFile(null);
       return;
     }
     if (detail) {
-      reset(courseRowToFormValues(detail, fields));
+      reset(courseRowToFormValuesForSlug(slug, detail, def.fields));
+      setThumbnailFile(null);
     }
-  }, [mode, slug, detail, reset]);
+  }, [mode, slug, detail, reset, def.fields]);
 
   const onSubmit = (values: FormValues) => {
     if (readOnly) return;
@@ -101,16 +190,16 @@ const CourseEntityFormDrawer = ({
       toast.error(err);
       return;
     }
-    const payload = serializeCourseEntityPayload(values, def.fields);
+    const fields = getSerializeFieldsForSlug(slug);
+    const payload = serializeCourseEntityPayload(values, fields);
+    if (THUMB_SLUGS.includes(slug) && thumbnailFile) {
+      payload.thumbnail_file = thumbnailFile;
+    }
 
     if (mode === "create") {
       createEntity(payload, {
-        onSuccess: () => {
-          toast.success("Created successfully");
-          onSuccess();
-        },
-        onError: (e: unknown) =>
-          toast.error(e instanceof Error ? e.message : "Create failed"),
+        onSuccess: () => onSuccess(),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Create failed"),
       });
       return;
     }
@@ -119,12 +208,8 @@ const CourseEntityFormDrawer = ({
     updateEntity(
       { id: entityId, body: payload },
       {
-        onSuccess: () => {
-          toast.success("Updated successfully");
-          onSuccess();
-        },
-        onError: (e: unknown) =>
-          toast.error(e instanceof Error ? e.message : "Update failed"),
+        onSuccess: () => onSuccess(),
+        onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Update failed"),
       }
     );
   };
@@ -140,12 +225,30 @@ const CourseEntityFormDrawer = ({
         </DrawerHeader>
         <DrawerBody>
           <div className="flex min-h-[200px] items-center justify-center">
-            <Loader2 className="text-primary h-8 w-8 animate-spin" />
+            <Spinner className="text-primary h-8 w-8" />
           </div>
         </DrawerBody>
       </>
     );
   }
+
+  const showThumb = THUMB_SLUGS.includes(slug) && !readOnly;
+  const storedThumb =
+    detail && typeof detail.thumbnail === "string" ? (detail.thumbnail as string) : null;
+
+  const renderStandardFields = (fields: CourseEntityFormField[]) =>
+    fields.map((f) => {
+      const id = `cef-${f.name}`;
+      return (
+        <div key={f.name} className="space-y-1.5">
+          <label className="text-sm font-medium" htmlFor={id}>
+            {f.label}
+            {f.required ? <span className="text-destructive"> *</span> : null}
+          </label>
+          {renderFieldControl(f, readOnly, register)}
+        </div>
+      );
+    });
 
   return (
     <>
@@ -162,68 +265,121 @@ const CourseEntityFormDrawer = ({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <DrawerBody className="space-y-4">
-          {def.fields.map((f) => {
-            const id = `cef-${f.name}`;
-            return (
-              <div key={f.name} className="space-y-1.5">
-                <label className="text-sm font-medium" htmlFor={id}>
-                  {f.label}
-                  {f.required ? <span className="text-destructive"> *</span> : null}
-                </label>
-                {f.type === "textarea" ? (
-                  <textarea
-                    id={id}
-                    className={cn(inputClass, "min-h-[88px]")}
-                    disabled={readOnly}
-                    placeholder={f.placeholder}
-                    {...register(f.name)}
+          {needsMeta && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardHeader className="space-y-1 py-3">
+                <CardTitle className="text-sm">Form reference</CardTitle>
+                <CardDescription>
+                  {metaLoading
+                    ? "Loading main categories for this form…"
+                    : `Choose a main category from ${mainCategoryOptions.length} published strands (search below).`}
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          )}
+
+          {slug === "main-categories" && (
+            <>
+              {renderStandardFields(def.fields.filter((f) => f.name !== "status"))}
+              {readOnly && storedThumb ? (
+                <p className="text-muted-foreground text-xs">
+                  Thumbnail: <span className="font-mono text-foreground">{storedThumb}</span>
+                </p>
+              ) : null}
+              {showThumb && (
+                <ImageDropzone
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  label="Thumbnail"
+                  hint="JPEG, PNG, WebP or GIF · stored privately under course/thumbnails"
+                  value={thumbnailFile}
+                  onSelect={setThumbnailFile}
+                  previewMode="wide"
+                />
+              )}
+              {storedThumb && !thumbnailFile && !readOnly ? (
+                <p className="text-muted-foreground text-xs">
+                  Current file: <span className="font-mono text-foreground">{storedThumb}</span>
+                </p>
+              ) : null}
+              {renderStandardFields(def.fields.filter((f) => f.name === "status"))}
+            </>
+          )}
+
+          {slug === "sub-categories" && (
+            <>
+              {renderStandardFields(def.fields)}
+              {readOnly && storedThumb ? (
+                <p className="text-muted-foreground text-xs">
+                  Thumbnail: <span className="font-mono text-foreground">{storedThumb}</span>
+                </p>
+              ) : null}
+              {showThumb && (
+                <ImageDropzone
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  label="Thumbnail"
+                  hint="JPEG, PNG, WebP or GIF · stored privately under course/thumbnails"
+                  value={thumbnailFile}
+                  onSelect={setThumbnailFile}
+                  previewMode="wide"
+                />
+              )}
+              {storedThumb && !thumbnailFile && !readOnly ? (
+                <p className="text-muted-foreground text-xs">
+                  Current file: <span className="font-mono text-foreground">{storedThumb}</span>
+                </p>
+              ) : null}
+              {readOnly && detail ? (
+                <div className="grid gap-3 rounded-lg border border-border bg-muted/20 p-3 text-sm sm:grid-cols-2">
+                  <div>
+                    <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                      Main category
+                    </div>
+                    <div className="mt-0.5 font-medium">
+                      #{String(detail.main_category_id ?? "—")}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+                      Status
+                    </div>
+                    <div className="mt-0.5 font-medium capitalize">{String(detail.status ?? "—")}</div>
+                  </div>
+                </div>
+              ) : null}
+              {!readOnly && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <Controller
+                    name="main_category_id"
+                    control={control}
+                    render={({ field }) => (
+                      <SearchableSelect
+                        id="cef-main-category"
+                        label="Main category"
+                        required
+                        options={mainCategoryOptions}
+                        value={String(field.value ?? "")}
+                        onChange={field.onChange}
+                        placeholder="Search and select…"
+                        disabled={metaLoading}
+                      />
+                    )}
                   />
-                ) : null}
-                {f.type === "json" ? (
-                  <textarea
-                    id={id}
-                    className={cn(inputClass, "min-h-[120px] font-mono text-xs")}
-                    disabled={readOnly}
-                    placeholder={f.placeholder}
-                    {...register(f.name)}
-                  />
-                ) : null}
-                {f.type === "text" || f.type === "number" ? (
-                  <input
-                    id={id}
-                    type={f.type === "number" ? "number" : "text"}
-                    step={f.type === "number" ? "any" : undefined}
-                    className={inputClass}
-                    disabled={readOnly}
-                    placeholder={f.placeholder}
-                    {...register(f.name)}
-                  />
-                ) : null}
-                {f.type === "date" ? (
-                  <input id={id} type="date" className={inputClass} disabled={readOnly} {...register(f.name)} />
-                ) : null}
-                {f.type === "select" ? (
-                  <select id={id} className={inputClass} disabled={readOnly} {...register(f.name)}>
-                    <option value="">—</option>
-                    {(f.options ?? []).map((o) => (
-                      <option key={o.value} value={o.value}>
-                        {o.label}
-                      </option>
-                    ))}
-                  </select>
-                ) : null}
-                {f.type === "checkbox" ? (
-                  <input
-                    id={id}
-                    type="checkbox"
-                    disabled={readOnly}
-                    className="border-input h-4 w-4 rounded"
-                    {...register(f.name)}
-                  />
-                ) : null}
-              </div>
-            );
-          })}
+                  <div className="space-y-1.5">
+                    <label className="text-sm font-medium" htmlFor="cef-status-sub">
+                      Status<span className="text-destructive"> *</span>
+                    </label>
+                    <select id="cef-status-sub" className={inputClass} {...register("status")}>
+                      <option value="">—</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {slug !== "main-categories" && slug !== "sub-categories" && renderStandardFields(def.fields)}
         </DrawerBody>
 
         {!readOnly && (
@@ -231,12 +387,12 @@ const CourseEntityFormDrawer = ({
             <Button type="submit" disabled={submitting}>
               {submitting ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Spinner className="mr-2 h-4 w-4" />
                   Saving…
                 </>
               ) : (
                 <>
-                  <Save className="mr-2 h-4 w-4" />
+                  <FloppyDisk className="mr-2 h-4 w-4" />
                   Save
                 </>
               )}

@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Label } from "@/components/ui";
-import { Image as ImageIcon, FileText, X } from "lucide-react";
+import { MediaImage, Page, Xmark } from "iconoir-react";
 import { cn } from "@/lib/utils";
 
 export interface ImageDropzoneProps {
@@ -85,7 +85,7 @@ const ImageDropzone = ({
           <div className="relative">
             {value.type === "application/pdf" ? (
               <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <FileText className="h-10 w-10 text-muted-foreground" />
+                <Page className="h-10 w-10 text-muted-foreground" />
                 <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
                   {value.name}
                 </span>
@@ -105,12 +105,12 @@ const ImageDropzone = ({
               onClick={(e) => { e.stopPropagation(); onSelect(null); }}
               className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white hover:bg-danger-active"
             >
-              <X className="h-3.5 w-3.5" />
+              <Xmark className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : (
           <>
-            <ImageIcon className="h-10 w-10 text-muted-foreground" />
+            <MediaImage className="h-10 w-10 text-muted-foreground" />
             <p className="mt-2 text-sm font-medium text-foreground">Click or drag to upload</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
           </>

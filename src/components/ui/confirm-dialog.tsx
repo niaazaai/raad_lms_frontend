@@ -1,7 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { AlertTriangle, Trash2, Info, CheckCircle, X, Loader2 } from "lucide-react";
+import { WarningTriangle, Trash, InfoCircle, CheckCircle, Xmark } from "iconoir-react";
+import { Spinner } from "./spinner";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
 
@@ -128,19 +129,19 @@ const variantConfig: Record<
   { icon: React.ReactNode; iconBg: string; iconColor: string; buttonVariant: string }
 > = {
   danger: {
-    icon: <Trash2 className="h-6 w-6" />,
+    icon: <Trash className="h-6 w-6" />,
     iconBg: "bg-danger/10",
     iconColor: "text-danger",
     buttonVariant: "destructive",
   },
   warning: {
-    icon: <AlertTriangle className="h-6 w-6" />,
+    icon: <WarningTriangle className="h-6 w-6" />,
     iconBg: "bg-warning/10",
     iconColor: "text-warning",
     buttonVariant: "warning",
   },
   info: {
-    icon: <Info className="h-6 w-6" />,
+    icon: <InfoCircle className="h-6 w-6" />,
     iconBg: "bg-info/10",
     iconColor: "text-info",
     buttonVariant: "default",
@@ -183,7 +184,7 @@ function ConfirmDialogComponent({
             onClick={onCancel}
             className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
           >
-            <X className="h-4 w-4" />
+            <Xmark className="h-4 w-4" />
           </button>
 
           {/* Content */}
@@ -220,7 +221,7 @@ function ConfirmDialogComponent({
             >
               {isLoading ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner className="h-4 w-4" />
                   Please wait...
                 </>
               ) : (

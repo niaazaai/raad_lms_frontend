@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Plus, Edit, Shield, UserX, Mail, Trash2 } from "lucide-react";
+import { Plus, EditPencil, Shield, UserXmark, Mail, Trash } from "iconoir-react";
 import { useUsers, useUpdateUserMutation, useDeleteUserMutation } from "../../hooks";
 import { UserManagement, UserStatus, UserStatusLabels, UserStatusColors } from "../../data/models";
 import { UserFormDrawer } from "../UserForm/UserFormDrawer";
@@ -239,7 +239,7 @@ const UserList = () => {
       {
         key: "edit",
         label: "Edit",
-        icon: <Edit className="h-4 w-4" />,
+        icon: <EditPencil className="h-4 w-4" />,
         onClick: (user) => openEditDrawer(user),
         permission: "users.update",
       },
@@ -253,7 +253,7 @@ const UserList = () => {
       {
         key: "toggle",
         label: "Suspend / Activate",
-        icon: <UserX className="h-4 w-4" />,
+        icon: <UserXmark className="h-4 w-4" />,
         variant: "danger" as const,
         onClick: async (user) => {
           const raw = String(user.status ?? "active");
@@ -273,7 +273,7 @@ const UserList = () => {
       {
         key: "delete",
         label: "Delete",
-        icon: <Trash2 className="h-4 w-4" />,
+        icon: <Trash className="h-4 w-4" />,
         variant: "danger" as const,
         onClick: async (user) => {
           const confirmed = await confirm(confirmPresets.delete("User"));

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Loader2, Mail, ArrowRight } from "lucide-react";
+import { Mail, NavArrowRight } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { callApi, fetchCsrfCookie } from "@/services";
 import { API_ENDPOINTS } from "@/data/constants/endpoints";
 import { RequestMethod } from "@/data/constants/methods";
@@ -91,7 +92,7 @@ const VerifyEmailPage = () => {
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-active disabled:opacity-50"
               >
                 {isResending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Spinner className="h-4 w-4" />
                 ) : (
                   "Resend verification email"
                 )}
@@ -104,7 +105,7 @@ const VerifyEmailPage = () => {
             className="mt-8 inline-flex items-center gap-2 text-sm font-medium text-primary hover:text-primary-active"
           >
             Back to sign in
-            <ArrowRight className="h-4 w-4" />
+            <NavArrowRight className="h-4 w-4" />
           </Link>
         </section>
       </main>

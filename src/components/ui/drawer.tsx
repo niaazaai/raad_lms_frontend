@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { X } from "lucide-react";
+import { Xmark } from "iconoir-react";
 import { cn } from "@/lib/utils";
 
 interface DrawerContextValue {
@@ -121,7 +121,7 @@ const DrawerHeader = ({ children, className }: DrawerHeaderProps) => {
         onClick={onClose}
         className="rounded-lg p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
       >
-        <X className="h-5 w-5" />
+        <Xmark className="h-5 w-5" />
       </button>
     </div>
   );

@@ -1,5 +1,6 @@
 import { Link, useParams, useLocation } from "react-router-dom";
-import { ArrowLeft, Shield, Key, Users, Loader2 } from "lucide-react";
+import { ArrowLeft, Shield, Key, Group } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useRole } from "../../hooks";
 import { Button } from "@/components/ui";
 import { Can } from "@/features/auth";
@@ -17,7 +18,7 @@ const RoleDetail = () => {
   if (isLoading || !roleId) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <Spinner className="h-10 w-10 text-primary" />
       </div>
     );
   }
@@ -70,7 +71,7 @@ const RoleDetail = () => {
         <div className="mt-8 grid gap-6 sm:grid-cols-2">
           <div className="rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
-              <Users className="h-5 w-5" />
+              <Group className="h-5 w-5" />
               <span className="text-sm font-medium">Users</span>
             </div>
             <p className="mt-2 text-2xl font-semibold text-foreground">

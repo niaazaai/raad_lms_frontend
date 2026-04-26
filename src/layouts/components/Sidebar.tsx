@@ -8,7 +8,7 @@ import {
   Key,
   BookStack,
   NavArrowDown,
-  Cancel,
+  Xmark,
   Community,
 } from "iconoir-react";
 import { useLayoutStore } from "@/store";
@@ -267,7 +267,7 @@ const Sidebar = () => {
             className="rounded-md p-1.5 hover:bg-muted lg:hidden"
             aria-label="Close menu"
           >
-            <Cancel className="h-5 w-5" />
+            <Xmark className="h-5 w-5" />
           </button>
         </div>
 

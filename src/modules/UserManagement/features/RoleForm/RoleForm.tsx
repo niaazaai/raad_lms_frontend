@@ -2,7 +2,8 @@ import { useEffect, useMemo } from "react";
 import { useNavigate, useParams, useSearchParams, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Loader2, Save, Shield, Check } from "lucide-react";
+import { ArrowLeft, FloppyDisk, Shield, Check } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useRole, useCreateRole, useUpdateRole, usePermissions } from "../../hooks";
 import { CreateRoleSchema } from "../../data/models";
 import { Button } from "@/components/ui";
@@ -142,7 +143,7 @@ const RoleForm = ({ mode = "create" }: RoleFormProps) => {
   if (isEdit && isLoadingRole) {
     return (
       <div className="flex h-64 items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Spinner className="h-8 w-8 text-primary" />
       </div>
     );
   }
@@ -295,12 +296,12 @@ const RoleForm = ({ mode = "create" }: RoleFormProps) => {
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? (
               <>
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Spinner className="h-4 w-4" />
                 {isEdit ? "Updating..." : "Creating..."}
               </>
             ) : (
               <>
-                <Save className="h-4 w-4" />
+                <FloppyDisk className="h-4 w-4" />
                 {isEdit ? "Update Role" : "Create Role"}
               </>
             )}

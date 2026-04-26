@@ -110,18 +110,14 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
     fields: [
       { name: "title", label: "Title", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea" },
-      { name: "thumbnail", label: "Thumbnail URL", type: "text" },
       { name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE },
     ],
     statusToggle: { field: "status", activeValue: "active", inactiveValue: "inactive" },
   },
   "sub-categories": {
     fields: [
-      { name: "main_category_id", label: "Main category ID", type: "number", required: true },
       { name: "title", label: "Title", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea" },
-      { name: "thumbnail", label: "Thumbnail URL", type: "text" },
-      { name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE },
     ],
     statusToggle: { field: "status", activeValue: "active", inactiveValue: "inactive" },
   },
@@ -343,11 +339,14 @@ export function getCreateDefaultsForEntity(slug: CourseEntitySlug): Record<strin
 
   switch (slug) {
     case "main-categories":
-    case "sub-categories":
     case "courses":
     case "assignments":
     case "subscription-plans":
     case "instructors":
+      if ("status" in out) out.status = "active";
+      break;
+    case "sub-categories":
+      out.main_category_id = "";
       if ("status" in out) out.status = "active";
       break;
     case "lessons":
@@ -428,8 +427,32 @@ export function courseRowToFormValues(
   return out;
 }
 
+/** Extra fields not listed in {@link COURSE_ENTITY_FORM_REGISTRY} field arrays (e.g. relation ids). */
+export function getSerializeFieldsForSlug(slug: CourseEntitySlug): CourseEntityFormField[] {
+  const def = COURSE_ENTITY_FORM_REGISTRY[slug];
+  const extra: CourseEntityFormField[] = [];
+  if (slug === "sub-categories") {
+    extra.push({ name: "main_category_id", label: "Main category", type: "number", required: true });
+    extra.push({ name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE });
+  }
+  return [...def.fields, ...extra];
+}
+
+export function courseRowToFormValuesForSlug(
+  slug: CourseEntitySlug,
+  row: Record<string, unknown>,
+  fields: CourseEntityFormField[]
+): Record<string, string | boolean> {
+  const out = courseRowToFormValues(row, fields);
+  if (slug === "sub-categories") {
+    out.main_category_id = stringifyForInput(row.main_category_id);
+    out.status = stringifyForInput(row.status);
+  }
+  return out;
+}
+
 export function serializeCourseEntityPayload(
-  values: Record<string, string | boolean>,
+  values: Record<string, string | boolean | File | null | undefined>,
   fields: CourseEntityFormField[]
 ): Record<string, unknown> {
   const out: Record<string, unknown> = {};
@@ -437,13 +460,17 @@ export function serializeCourseEntityPayload(
   for (const f of fields) {
     const raw = values[f.name];
 
+    if (raw instanceof File) {
+      out[f.name] = raw;
+      continue;
+    }
+
     if (f.type === "checkbox") {
       out[f.name] = Boolean(raw);
       continue;
     }
 
-    if (raw === "" || raw === undefined) {
-      if (f.required) continue;
+    if (raw === "" || raw === undefined || raw === null) {
       continue;
     }
 

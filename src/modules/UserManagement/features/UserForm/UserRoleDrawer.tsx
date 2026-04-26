@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Loader2, Save, Shield } from "lucide-react";
+import { FloppyDisk, Shield } from "iconoir-react";
+import { Spinner } from "@/components/ui/spinner";
 import { useUser, useUpdateUser, useRoles } from "../../hooks";
 import type { UserManagement } from "../../data/models";
 import { Button } from "@/components/ui";
@@ -54,7 +55,7 @@ export const UserRoleDrawer = ({ user, onSuccess }: UserRoleDrawerProps) => {
         </DrawerHeader>
         <DrawerBody>
           <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <Spinner className="h-8 w-8 text-primary" />
           </div>
         </DrawerBody>
       </>
@@ -101,12 +102,12 @@ export const UserRoleDrawer = ({ user, onSuccess }: UserRoleDrawerProps) => {
         <Button onClick={onSubmit} disabled={isUpdating}>
           {isUpdating ? (
             <>
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Spinner className="h-4 w-4" />
               Saving...
             </>
           ) : (
             <>
-              <Save className="h-4 w-4" />
+              <FloppyDisk className="h-4 w-4" />
               Save Roles
             </>
           )}
