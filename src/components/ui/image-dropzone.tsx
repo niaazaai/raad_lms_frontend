@@ -12,6 +12,8 @@ export interface ImageDropzoneProps {
   value?: File | null;
   onSelect: (file: File | null) => void;
   previewMode?: "square" | "wide";
+  initialPreviewUrl?: string | null;
+  initialPreviewName?: string | null;
 }
 
 const ImageDropzone = ({
@@ -23,6 +25,8 @@ const ImageDropzone = ({
   value,
   onSelect,
   previewMode = "square",
+  initialPreviewUrl,
+  initialPreviewName,
 }: ImageDropzoneProps) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -81,18 +85,18 @@ const ImageDropzone = ({
           error && "border-danger"
         )}
       >
-        {value ? (
+        {value || initialPreviewUrl ? (
           <div className="relative">
-            {value.type === "application/pdf" ? (
+            {value && value.type === "application/pdf" ? (
               <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
                 <Page className="h-10 w-10 text-muted-foreground" />
                 <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
-                  {value.name}
+                  {value.name || initialPreviewName || "File"}
                 </span>
               </div>
             ) : (
               <img
-                src={previewUrl ?? undefined}
+                src={previewUrl ?? initialPreviewUrl ?? undefined}
                 alt="Preview"
                 className={cn(
                   "object-cover border border-border rounded-lg",

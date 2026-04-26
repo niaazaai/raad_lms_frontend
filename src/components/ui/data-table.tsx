@@ -141,6 +141,13 @@ function ActionsCell<T>({
   actions: NonNullable<DataTableConfig<T>["actions"]>;
   rowId: (r: T) => string | number;
 }) {
+  const resolveLabel = (action: DataTableActionItem<T>) =>
+    typeof action.label === "function" ? action.label(row) : action.label;
+  const resolveIcon = (action: DataTableActionItem<T>) =>
+    typeof action.icon === "function" ? action.icon(row) : action.icon;
+  const resolveVariant = (action: DataTableActionItem<T>) =>
+    typeof action.variant === "function" ? action.variant(row) : action.variant;
+
   return (
     <td className="whitespace-nowrap px-4 py-3 text-right">
       <DropdownMenu>
@@ -153,11 +160,11 @@ function ActionsCell<T>({
           {actions.map((action) => (
             <DropdownMenuItem
               key={action.key}
-              variant={action.variant}
+              variant={resolveVariant(action)}
               onSelect={() => action.onClick(row)}
             >
-              {action.icon}
-              {action.label}
+              {resolveIcon(action)}
+              {resolveLabel(action)}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>

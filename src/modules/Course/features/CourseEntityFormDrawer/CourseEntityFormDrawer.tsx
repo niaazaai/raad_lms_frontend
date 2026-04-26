@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { FloppyDisk } from "iconoir-react";
+import { FloppyDisk, MediaImage } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import type { CourseEntitySlug } from "../../data/courseRegistry";
@@ -28,10 +28,6 @@ import {
   DrawerTitle,
   ImageDropzone,
   SearchableSelect,
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
@@ -233,8 +229,16 @@ const CourseEntityFormDrawer = ({
   }
 
   const showThumb = THUMB_SLUGS.includes(slug) && !readOnly;
-  const storedThumb =
-    detail && typeof detail.thumbnail === "string" ? (detail.thumbnail as string) : null;
+  const storedThumb = detail
+    ? (typeof detail.thumbnail_url === "string" && detail.thumbnail_url.trim().length > 0
+        ? detail.thumbnail_url
+        : typeof detail.thumbnail === "string" &&
+            (detail.thumbnail.startsWith("http://") ||
+              detail.thumbnail.startsWith("https://") ||
+              detail.thumbnail.startsWith("/"))
+          ? detail.thumbnail
+          : null)
+    : null;
 
   const renderStandardFields = (fields: CourseEntityFormField[]) =>
     fields.map((f) => {
@@ -250,13 +254,61 @@ const CourseEntityFormDrawer = ({
       );
     });
 
+  const detailsEntries = useMemo(() => {
+    if (!detail) return [];
+    return Object.entries(detail).filter(([key]) => key !== "thumbnail");
+  }, [detail]);
+
+  const renderReadOnlyDetails = () => (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-border bg-muted/20 p-4">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            {storedThumb ? (
+              <img
+                src={storedThumb}
+                alt={String(detail?.title ?? entityTitle)}
+                className="h-12 w-12 rounded-lg object-cover"
+              />
+            ) : (
+              <MediaImage className="h-6 w-6" />
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Title</p>
+            <p className="truncate text-base font-semibold text-foreground">
+              {String(detail?.title ?? "Untitled")}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">ID #{String(detail?.id ?? "—")}</p>
+          </div>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {detailsEntries.map(([key, value]) => {
+          const text =
+            value === null || value === undefined
+              ? "—"
+              : typeof value === "object"
+                ? JSON.stringify(value)
+                : String(value);
+          return (
+            <div key={key} className="rounded-lg border border-border/80 bg-background px-3 py-2.5">
+              <p className="text-muted-foreground text-xs uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
+              <p className="mt-1 text-sm font-medium text-foreground break-words">{text}</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <DrawerHeader>
         <DrawerTitle>{heading}</DrawerTitle>
         <DrawerDescription>
           {readOnly
-            ? "Read-only details from the API."
+            ? "Tidy entity overview."
             : mode === "create"
               ? "Fill in the fields and save. IDs reference other records in the LMS."
               : "Update fields and save changes."}
@@ -265,28 +317,12 @@ const CourseEntityFormDrawer = ({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <DrawerBody className="space-y-4">
-          {needsMeta && (
-            <Card className="border-primary/20 bg-primary/5">
-              <CardHeader className="space-y-1 py-3">
-                <CardTitle className="text-sm">Form reference</CardTitle>
-                <CardDescription>
-                  {metaLoading
-                    ? "Loading main categories for this form…"
-                    : `Choose a main category from ${mainCategoryOptions.length} published strands (search below).`}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          )}
+          {readOnly ? renderReadOnlyDetails() : null}
 
           {slug === "main-categories" && (
             <>
-              {renderStandardFields(def.fields.filter((f) => f.name !== "status"))}
-              {readOnly && storedThumb ? (
-                <p className="text-muted-foreground text-xs">
-                  Thumbnail: <span className="font-mono text-foreground">{storedThumb}</span>
-                </p>
-              ) : null}
-              {showThumb && (
+              {!readOnly ? renderStandardFields(def.fields.filter((f) => f.name !== "status")) : null}
+              {showThumb ? (
                 <ImageDropzone
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   label="Thumbnail"
@@ -294,58 +330,16 @@ const CourseEntityFormDrawer = ({
                   value={thumbnailFile}
                   onSelect={setThumbnailFile}
                   previewMode="wide"
+                  initialPreviewUrl={thumbnailFile ? null : storedThumb}
+                  initialPreviewName={storedThumb}
                 />
-              )}
-              {storedThumb && !thumbnailFile && !readOnly ? (
-                <p className="text-muted-foreground text-xs">
-                  Current file: <span className="font-mono text-foreground">{storedThumb}</span>
-                </p>
               ) : null}
-              {renderStandardFields(def.fields.filter((f) => f.name === "status"))}
+              {!readOnly ? renderStandardFields(def.fields.filter((f) => f.name === "status")) : null}
             </>
           )}
 
           {slug === "sub-categories" && (
             <>
-              {renderStandardFields(def.fields)}
-              {readOnly && storedThumb ? (
-                <p className="text-muted-foreground text-xs">
-                  Thumbnail: <span className="font-mono text-foreground">{storedThumb}</span>
-                </p>
-              ) : null}
-              {showThumb && (
-                <ImageDropzone
-                  accept="image/jpeg,image/png,image/webp,image/gif"
-                  label="Thumbnail"
-                  hint="JPEG, PNG, WebP or GIF · stored privately under course/thumbnails"
-                  value={thumbnailFile}
-                  onSelect={setThumbnailFile}
-                  previewMode="wide"
-                />
-              )}
-              {storedThumb && !thumbnailFile && !readOnly ? (
-                <p className="text-muted-foreground text-xs">
-                  Current file: <span className="font-mono text-foreground">{storedThumb}</span>
-                </p>
-              ) : null}
-              {readOnly && detail ? (
-                <div className="grid gap-3 rounded-lg border border-border bg-muted/20 p-3 text-sm sm:grid-cols-2">
-                  <div>
-                    <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                      Main category
-                    </div>
-                    <div className="mt-0.5 font-medium">
-                      #{String(detail.main_category_id ?? "—")}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
-                      Status
-                    </div>
-                    <div className="mt-0.5 font-medium capitalize">{String(detail.status ?? "—")}</div>
-                  </div>
-                </div>
-              ) : null}
               {!readOnly && (
                 <div className="grid gap-4 sm:grid-cols-2">
                   <Controller
@@ -376,10 +370,23 @@ const CourseEntityFormDrawer = ({
                   </div>
                 </div>
               )}
+              {!readOnly ? renderStandardFields(def.fields) : null}
+              {showThumb ? (
+                <ImageDropzone
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  label="Thumbnail"
+                  hint="JPEG, PNG, WebP or GIF · stored privately under course/thumbnails"
+                  value={thumbnailFile}
+                  onSelect={setThumbnailFile}
+                  previewMode="wide"
+                  initialPreviewUrl={thumbnailFile ? null : storedThumb}
+                  initialPreviewName={storedThumb}
+                />
+              ) : null}
             </>
           )}
 
-          {slug !== "main-categories" && slug !== "sub-categories" && renderStandardFields(def.fields)}
+          {slug !== "main-categories" && slug !== "sub-categories" && !readOnly && renderStandardFields(def.fields)}
         </DrawerBody>
 
         {!readOnly && (

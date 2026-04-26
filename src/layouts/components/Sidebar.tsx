@@ -252,13 +252,16 @@ const Sidebar = () => {
           mobileMenuOpen && "translate-x-0"
         )}
       >
-        <div className="flex h-12 items-center justify-between border-b border-border px-2.5">
-          <NavLink to="/dashboard" className="flex min-w-0 items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-sm font-bold text-white">
-              R
+        <div className="flex h-14 items-center justify-between border-b border-border px-2.5">
+          <NavLink to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/60">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-border">
+              <img src="/logo.png" alt="RAAD LMS" className="h-7 w-7 object-contain" />
             </div>
             {!sidebarCollapsed && (
-              <span className="truncate text-sm font-bold tracking-tight text-foreground">Raad LMS</span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-bold tracking-tight text-foreground">RAAD LMS</p>
+                <p className="truncate text-[11px] leading-tight text-muted-foreground">Learning Platform</p>
+              </div>
             )}
           </NavLink>
 

@@ -32,7 +32,7 @@ export interface CourseEntityConfig {
 export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig> = {
   "main-categories": {
     slug: "main-categories",
-    title: "Course main categories",
+    title: "Main categories",
     pageDescription:
       "Shape the top of your ACCA catalog—group papers and qualifications so learners find the right track fast.",
     apiPath: "/main-categories",
@@ -41,16 +41,16 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
   },
   "sub-categories": {
     slug: "sub-categories",
-    title: "Course sub categories",
+    title: "Sub categories",
     pageDescription:
       "Refine each main strand into skills levels, exam sessions, or bundles—keep sub-groups tight and searchable.",
     apiPath: "/sub-categories",
     permission: "course.sub_categories.read",
-    columns: ["id", "main_category_id", "title", "status", "created_at"],
+    columns: ["id", "main_category_name", "title", "status", "created_at"],
   },
   "course-faasls": {
     slug: "course-faasls",
-    title: "Course modules (faasl)",
+    title: "Modules (faasl)",
     pageDescription:
       "Modules (faasl) sequence the ACCA journey—name each stage so courses and classes stay aligned.",
     apiPath: "/course-faasls",
@@ -69,7 +69,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
   },
   lessons: {
     slug: "lessons",
-    title: "Course lessons",
+    title: "Lessons",
     pageDescription:
       "Lessons carry video, readings, and progress signals—structure each unit for clarity and completion tracking.",
     apiPath: "/lessons",

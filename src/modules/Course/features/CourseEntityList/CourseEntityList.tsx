@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
-import { Link, useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import { Prohibition, CheckCircle, Eye, EditPencil, Plus, Trash } from "iconoir-react";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
@@ -28,11 +28,13 @@ import {
   Drawer,
   DrawerContent,
   DrawerOverlay,
+  PageBreadcrumb,
   useConfirmDialog,
   confirmPresets,
 } from "@/components/ui";
 import { Can, PermissionDeniedCard, useAuth } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
+import { cn } from "@/lib/utils";
 import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 
 const RELATIVE_DATE_KEYS = new Set([
@@ -51,6 +53,11 @@ const RELATIVE_DATE_KEYS = new Set([
   "closed_at",
 ]);
 
+const STATUS_FILTER_OPTIONS = [
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+];
+
 function isSlug(value: string | undefined): value is CourseEntitySlug {
   return !!value && (COURSE_ENTITY_SLUGS as string[]).includes(value);
 }
@@ -59,6 +66,66 @@ function getPaginationFromResponse(response: unknown): DataTablePaginationMeta |
   if (!response || typeof response !== "object") return null;
   const meta = (response as { meta?: { pagination?: DataTablePaginationMeta } }).meta;
   return meta?.pagination ?? null;
+}
+
+function getTextOrFallback(value: unknown, fallback = "—"): string {
+  if (value === null || value === undefined) return fallback;
+  const text = String(value).trim();
+  return text.length > 0 ? text : fallback;
+}
+
+function getCategoryImage(row: CourseRow): string | null {
+  const candidates = [row.thumbnail_url, row.thumbnail, row.image_url, row.image, row.photo_url, row.photo];
+  for (const candidate of candidates) {
+    if (typeof candidate === "string" && candidate.trim().length > 0) {
+      const value = candidate.trim();
+      if (value === "main_category_icon.svg") continue;
+      if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) {
+        return value;
+      }
+    }
+  }
+  return null;
+}
+
+function getMainCategoryName(row: CourseRow): string {
+  if (typeof row.main_category_name === "string" && row.main_category_name.trim().length > 0) {
+    return row.main_category_name;
+  }
+  const mainCategory = row.main_category;
+  if (mainCategory && typeof mainCategory === "object") {
+    const maybeTitle = (mainCategory as { title?: unknown }).title;
+    if (typeof maybeTitle === "string" && maybeTitle.trim().length > 0) {
+      return maybeTitle;
+    }
+  }
+  return row.main_category_id ? `#${String(row.main_category_id)}` : "—";
+}
+
+function getTitleInitials(title: unknown): string {
+  const normalized = typeof title === "string" ? title.trim() : "";
+  if (!normalized) return "--";
+  const words = normalized.split(/\s+/).filter(Boolean);
+  if (words.length >= 2) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+  return normalized.slice(0, 2).toUpperCase();
+}
+
+function StatusBadge({ value }: { value: unknown }) {
+  const normalized = String(value ?? "").toLowerCase();
+  const isActive = normalized === "active";
+  const label = normalized ? normalized.charAt(0).toUpperCase() + normalized.slice(1) : "—";
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium",
+        isActive ? "bg-success/10 text-success" : "bg-danger/10 text-danger"
+      )}
+    >
+      {label}
+    </span>
+  );
 }
 
 const CourseEntityList = () => {
@@ -99,6 +166,7 @@ const CourseEntityList = () => {
     per_page: params.per_page,
     sort_by: params.sort_by,
     sort_dir: params.sort_dir,
+    status: (params.filters.status as string) || undefined,
     ...extraParams,
   };
 
@@ -157,124 +225,161 @@ const CourseEntityList = () => {
     const updatePerm = coursePermission(cfg.permission, "update");
     const statusToggle = formDef.statusToggle;
 
+    const mappedColumns = cfg.columns.map((key) => ({
+      key,
+      header: key === "main_category_name" ? "Main category" : key.replace(/_/g, " "),
+      sortable: key !== "id",
+      filterable: key.includes("status"),
+      filterOptions: key.includes("status") ? STATUS_FILTER_OPTIONS : undefined,
+      render: (row: CourseRow) => {
+        if (key === "main_category_name") {
+          return getMainCategoryName(row);
+        }
+        if (key.includes("status")) {
+          return <StatusBadge value={row[key]} />;
+        }
+        if (key === "thumbnail") {
+          const title = getTextOrFallback(row.title, "Category");
+          const imageUrl = getCategoryImage(row);
+          return (
+            <div className="flex items-center gap-2">
+              {imageUrl ? (
+                <img src={imageUrl} alt={title} className="h-9 w-9 rounded-md border border-border object-cover" />
+              ) : (
+                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+                  {getTitleInitials(title)}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        const v = row[key];
+        if (v === null || v === undefined) return "—";
+        if (RELATIVE_DATE_KEYS.has(key) && (typeof v === "string" || typeof v === "number")) {
+          return formatRelativeTime(String(v));
+        }
+        if (typeof v === "object") return JSON.stringify(v);
+        return String(v);
+      },
+    }));
+
+    const columns =
+      resolvedSlug === "main-categories" || resolvedSlug === "sub-categories"
+        ? [
+            ...mappedColumns.slice(0, 1),
+            {
+              key: "thumbnail",
+              header: "Image",
+              sortable: false,
+              filterable: false,
+              render: (row: CourseRow) => {
+                const title = getTextOrFallback(row.title, "Category");
+                const imageUrl = getCategoryImage(row);
+                return imageUrl ? (
+                  <img src={imageUrl} alt={title} className="h-9 w-9 rounded-md border border-border object-cover" />
+                ) : (
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+                    {getTitleInitials(title)}
+                  </div>
+                );
+              },
+            },
+            ...mappedColumns.slice(1),
+          ]
+        : mappedColumns;
+
     return {
-      columns: [
-        ...cfg.columns.map((key) => ({
-          key,
-          header: key.replace(/_/g, " "),
-          sortable: key !== "id",
-          render: (row: CourseRow) => {
-            const v = row[key];
-            if (v === null || v === undefined) return "—";
-            if (RELATIVE_DATE_KEYS.has(key) && (typeof v === "string" || typeof v === "number")) {
-              return formatRelativeTime(String(v));
-            }
-            if (typeof v === "object") return JSON.stringify(v);
-            return String(v);
-          },
-        })),
+      columns,
+      rowId: (row) => (typeof row.id === "number" ? row.id : String(row.id ?? "")),
+      emptyMessage: "No records found.",
+      actions: [
         {
-          key: "actions",
-          header: "Actions",
-          sortable: false,
-          render: (row: CourseRow) => {
+          key: "view",
+          label: "View",
+          icon: <Eye className="h-4 w-4" />,
+          permission: cfg.permission,
+          onClick: (row) => {
             const id = row.id;
             const idNum = typeof id === "number" ? id : Number(id);
             const canAct = typeof id === "number" || !Number.isNaN(idNum);
+            if (!canAct) return;
+            openViewDrawer(typeof id === "number" ? id : idNum);
+          },
+        },
+        {
+          key: "edit",
+          label: "Edit",
+          icon: <EditPencil className="h-4 w-4" />,
+          permission: updatePerm,
+          onClick: (row) => {
+            const id = row.id;
+            const idNum = typeof id === "number" ? id : Number(id);
+            const canAct = typeof id === "number" || !Number.isNaN(idNum);
+            if (!canAct) return;
+            openEditDrawer(typeof id === "number" ? id : idNum);
+          },
+        },
+        ...(statusToggle
+          ? [
+              {
+                key: "toggle",
+                label: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? "Deactivate" : "Activate";
+                },
+                icon: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? (
+                    <Prohibition className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  );
+                },
+                variant: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? "danger" : "default";
+                },
+                permission: updatePerm,
+                onClick: (row: CourseRow) => {
+                  const id = row.id;
+                  const idNum = typeof id === "number" ? id : Number(id);
+                  const canAct = typeof id === "number" || !Number.isNaN(idNum);
+                  if (!canAct || patching) return;
+                  const numericId = typeof id === "number" ? id : idNum;
+                  const cur = String(row[statusToggle.field] ?? "");
+                  const nextVal =
+                    cur === statusToggle.activeValue
+                      ? statusToggle.inactiveValue
+                      : statusToggle.activeValue;
+                  patchEntity(
+                    { id: numericId, body: { [statusToggle.field]: nextVal } },
+                    {
+                      onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Update failed"),
+                    }
+                  );
+                },
+              },
+            ]
+          : []),
+        {
+          key: "delete",
+          label: "Delete",
+          icon: <Trash className="h-4 w-4" />,
+          variant: "danger",
+          permission: deletePerm,
+          onClick: (row) => {
+            const id = row.id;
+            const idNum = typeof id === "number" ? id : Number(id);
+            const canAct = typeof id === "number" || !Number.isNaN(idNum);
+            if (!canAct || deleting) return;
             const numericId = typeof id === "number" ? id : idNum;
-
-            return (
-              <div className="flex flex-wrap items-center gap-1">
-                <Can permission={cfg.permission}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={!canAct}
-                    onClick={() => {
-                      if (!canAct) return;
-                      openViewDrawer(numericId);
-                    }}
-                    aria-label="View row"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                </Can>
-                <Can permission={updatePerm}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={!canAct}
-                    onClick={() => {
-                      if (!canAct) return;
-                      openEditDrawer(numericId);
-                    }}
-                    aria-label="Edit row"
-                  >
-                    <EditPencil className="h-4 w-4" />
-                  </Button>
-                </Can>
-                {statusToggle ? (
-                  <Can permission={updatePerm}>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={!canAct || patching}
-                      onClick={() => {
-                        if (!canAct) return;
-                        const cur = String(row[statusToggle.field] ?? "");
-                        const nextVal =
-                          cur === statusToggle.activeValue
-                            ? statusToggle.inactiveValue
-                            : statusToggle.activeValue;
-                        patchEntity(
-                          { id: numericId, body: { [statusToggle.field]: nextVal } },
-                          {
-                            onError: (e: unknown) =>
-                              toast.error(e instanceof Error ? e.message : "Update failed"),
-                          }
-                        );
-                      }}
-                      aria-label={
-                        String(row[statusToggle.field] ?? "") === statusToggle.activeValue
-                          ? "Disable"
-                          : "Enable"
-                      }
-                    >
-                      {String(row[statusToggle.field] ?? "") === statusToggle.activeValue ? (
-                        <Prohibition className="text-muted-foreground h-4 w-4" />
-                      ) : (
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                      )}
-                    </Button>
-                  </Can>
-                ) : null}
-                <Can permission={deletePerm}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    disabled={deleting || !canAct}
-                    onClick={() => {
-                      if (!canAct) return;
-                      void confirm(confirmPresets.delete(cfg.title)).then((ok: boolean) => {
-                        if (ok) deleteRow(numericId);
-                      });
-                    }}
-                    aria-label="Delete row"
-                  >
-                    <Trash className="h-4 w-4 text-destructive" />
-                  </Button>
-                </Can>
-              </div>
-            );
+            void confirm(confirmPresets.delete(cfg.title)).then((ok: boolean) => {
+              if (ok) deleteRow(numericId);
+            });
           },
         },
       ],
-      rowId: (row) => (typeof row.id === "number" ? row.id : String(row.id ?? "")),
-      emptyMessage: "No records found.",
     };
   }, [
     cfg,
@@ -317,14 +422,13 @@ const CourseEntityList = () => {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <Link
-            to="/course"
-            className="text-muted-foreground mb-2 inline-block text-sm hover:text-foreground hover:underline"
-          >
-            ← Course module
-          </Link>
+          <PageBreadcrumb
+            items={[
+              { label: "Course", to: "/course" },
+              { label: cfg.title },
+            ]}
+          />
           <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">{cfg.pageDescription}</p>
         </div>
         <Can permission={createPerm}>
           <Button type="button" onClick={openCreateDrawer} className="shrink-0 gap-2">
@@ -373,7 +477,13 @@ const CourseEntityList = () => {
       <DataTable<CourseRow>
         data={rows}
         config={tableConfig}
-        params={params}
+        params={{
+          ...params,
+          filters: {
+            ...params.filters,
+            status: (params.filters.status as string) || undefined,
+          },
+        }}
         onParamsChange={updateParams}
         pagination={pagination}
         isLoading={isFetching}

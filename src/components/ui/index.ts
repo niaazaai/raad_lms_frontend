@@ -37,6 +37,7 @@ export {
   DropdownMenuRadioItem,
 } from "./dropdown-menu";
 export { DataTable } from "./data-table";
+export { default as PageBreadcrumb } from "./page-breadcrumb";
 export { default as ImageDropzone } from "./image-dropzone";
 export type { ImageDropzoneProps } from "./image-dropzone";
 export { default as SearchableSelect } from "./searchable-select";
