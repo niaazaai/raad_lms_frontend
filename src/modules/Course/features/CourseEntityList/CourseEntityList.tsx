@@ -35,6 +35,7 @@ import {
 import { Can, PermissionDeniedCard, useAuth } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
 import { cn } from "@/lib/utils";
+import { API_V1_BASE } from "@/services/apiClient";
 import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 
 const RELATIVE_DATE_KEYS = new Set([
@@ -74,18 +75,34 @@ function getTextOrFallback(value: unknown, fallback = "—"): string {
   return text.length > 0 ? text : fallback;
 }
 
-function getCategoryImage(row: CourseRow): string | null {
-  const candidates = [row.thumbnail_url, row.thumbnail, row.image_url, row.image, row.photo_url, row.photo];
-  for (const candidate of candidates) {
-    if (typeof candidate === "string" && candidate.trim().length > 0) {
-      const value = candidate.trim();
-      if (value === "main_category_icon.svg") continue;
-      if (value.startsWith("http://") || value.startsWith("https://") || value.startsWith("/")) {
-        return value;
-      }
-    }
-  }
+function getCategoryThumbnailSrc(slug: CourseEntitySlug, row: CourseRow): string | null {
+  const rawId = row.id;
+  const id = typeof rawId === "number" ? rawId : Number(rawId);
+  if (typeof id !== "number" || Number.isNaN(id)) return null;
+  if (slug === "main-categories") return `${API_V1_BASE}/main-categories/${id}/thumbnail`;
+  if (slug === "sub-categories") return `${API_V1_BASE}/sub-categories/${id}/thumbnail`;
   return null;
+}
+
+function CategoryImageCell({ slug, row }: { slug: CourseEntitySlug; row: CourseRow }) {
+  const [failed, setFailed] = useState(false);
+  const title = getTextOrFallback(row.title, "Category");
+  const src = getCategoryThumbnailSrc(slug, row);
+  if (!src || failed) {
+    return (
+      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
+        {getTitleInitials(title)}
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt=""
+      className="h-9 w-9 rounded-md border border-border object-cover"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 function getMainCategoryName(row: CourseRow): string {
@@ -239,19 +256,7 @@ const CourseEntityList = () => {
           return <StatusBadge value={row[key]} />;
         }
         if (key === "thumbnail") {
-          const title = getTextOrFallback(row.title, "Category");
-          const imageUrl = getCategoryImage(row);
-          return (
-            <div className="flex items-center gap-2">
-              {imageUrl ? (
-                <img src={imageUrl} alt={title} className="h-9 w-9 rounded-md border border-border object-cover" />
-              ) : (
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
-                  {getTitleInitials(title)}
-                </div>
-              )}
-            </div>
-          );
+          return <CategoryImageCell slug={resolvedSlug} row={row} />;
         }
 
         const v = row[key];
@@ -273,17 +278,7 @@ const CourseEntityList = () => {
               header: "Image",
               sortable: false,
               filterable: false,
-              render: (row: CourseRow) => {
-                const title = getTextOrFallback(row.title, "Category");
-                const imageUrl = getCategoryImage(row);
-                return imageUrl ? (
-                  <img src={imageUrl} alt={title} className="h-9 w-9 rounded-md border border-border object-cover" />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-xs font-semibold text-primary">
-                    {getTitleInitials(title)}
-                  </div>
-                );
-              },
+              render: (row: CourseRow) => <CategoryImageCell slug={resolvedSlug} row={row} />,
             },
             ...mappedColumns.slice(1),
           ]

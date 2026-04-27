@@ -37,7 +37,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Shape the top of your ACCA catalog—group papers and qualifications so learners find the right track fast.",
     apiPath: "/main-categories",
     permission: "course.main_categories.read",
-    columns: ["id", "title", "status", "created_at"],
+    columns: ["id", "title", "status"],
   },
   "sub-categories": {
     slug: "sub-categories",
@@ -46,7 +46,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Refine each main strand into skills levels, exam sessions, or bundles—keep sub-groups tight and searchable.",
     apiPath: "/sub-categories",
     permission: "course.sub_categories.read",
-    columns: ["id", "main_category_name", "title", "status", "created_at"],
+    columns: ["id", "main_category_name", "title", "status"],
   },
   "course-faasls": {
     slug: "course-faasls",

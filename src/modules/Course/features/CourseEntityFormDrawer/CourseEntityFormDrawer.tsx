@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { FloppyDisk, MediaImage } from "iconoir-react";
+import { FloppyDisk } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import type { CourseEntitySlug } from "../../data/courseRegistry";
@@ -30,6 +30,7 @@ import {
   SearchableSelect,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
+import { API_V1_BASE } from "@/services/apiClient";
 
 type FormValues = Record<string, string | boolean>;
 
@@ -133,6 +134,37 @@ function renderFieldControl(
 
 const THUMB_SLUGS: CourseEntitySlug[] = ["main-categories", "sub-categories"];
 
+function courseEntityThumbnailUrl(slug: CourseEntitySlug, entityId: number | null): string | null {
+  if (entityId == null) return null;
+  if (slug === "main-categories") return `${API_V1_BASE}/main-categories/${entityId}/thumbnail`;
+  if (slug === "sub-categories") return `${API_V1_BASE}/sub-categories/${entityId}/thumbnail`;
+  return null;
+}
+
+function CategoryDrawerViewImage({ src, title }: { src: string; title: string }) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
+  if (failed) {
+    return (
+      <div className="flex min-h-[160px] items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 text-sm text-muted-foreground">
+        No image uploaded
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={title}
+      className="max-h-80 w-full object-contain"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 const CourseEntityFormDrawer = ({
   slug,
   entityTitle,
@@ -213,6 +245,9 @@ const CourseEntityFormDrawer = ({
   const heading =
     mode === "create" ? `Create ${entityTitle}` : mode === "edit" ? `Edit ${entityTitle}` : `View ${entityTitle}`;
 
+  const thumbnailSrc =
+    THUMB_SLUGS.includes(slug) && entityId != null ? courseEntityThumbnailUrl(slug, entityId) : null;
+
   if (mode !== "create" && entityId != null && loadingDetail && !detail) {
     return (
       <>
@@ -229,16 +264,6 @@ const CourseEntityFormDrawer = ({
   }
 
   const showThumb = THUMB_SLUGS.includes(slug) && !readOnly;
-  const storedThumb = detail
-    ? (typeof detail.thumbnail_url === "string" && detail.thumbnail_url.trim().length > 0
-        ? detail.thumbnail_url
-        : typeof detail.thumbnail === "string" &&
-            (detail.thumbnail.startsWith("http://") ||
-              detail.thumbnail.startsWith("https://") ||
-              detail.thumbnail.startsWith("/"))
-          ? detail.thumbnail
-          : null)
-    : null;
 
   const renderStandardFields = (fields: CourseEntityFormField[]) =>
     fields.map((f) => {
@@ -254,53 +279,34 @@ const CourseEntityFormDrawer = ({
       );
     });
 
-  const detailsEntries = useMemo(() => {
-    if (!detail) return [];
-    return Object.entries(detail).filter(([key]) => key !== "thumbnail");
-  }, [detail]);
-
-  const renderReadOnlyDetails = () => (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-border bg-muted/20 p-4">
-        <div className="flex items-start gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            {storedThumb ? (
-              <img
-                src={storedThumb}
-                alt={String(detail?.title ?? entityTitle)}
-                className="h-12 w-12 rounded-lg object-cover"
-              />
-            ) : (
-              <MediaImage className="h-6 w-6" />
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Title</p>
-            <p className="truncate text-base font-semibold text-foreground">
-              {String(detail?.title ?? "Untitled")}
-            </p>
-            <p className="text-muted-foreground mt-1 text-xs">ID #{String(detail?.id ?? "—")}</p>
-          </div>
+  const renderCategoryReadOnly = () => {
+    if (!detail) return null;
+    const title = String(detail.title ?? "—");
+    const description =
+      detail.description != null && String(detail.description).trim() !== ""
+        ? String(detail.description)
+        : "—";
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Title</p>
+          <p className="text-lg font-semibold text-foreground">{title}</p>
         </div>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {detailsEntries.map(([key, value]) => {
-          const text =
-            value === null || value === undefined
-              ? "—"
-              : typeof value === "object"
-                ? JSON.stringify(value)
-                : String(value);
-          return (
-            <div key={key} className="rounded-lg border border-border/80 bg-background px-3 py-2.5">
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">{key.replace(/_/g, " ")}</p>
-              <p className="mt-1 text-sm font-medium text-foreground break-words">{text}</p>
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Description</p>
+          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{description}</p>
+        </div>
+        {thumbnailSrc ? (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Image</p>
+            <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
+              <CategoryDrawerViewImage key={entityId ?? 0} src={thumbnailSrc} title={title} />
             </div>
-          );
-        })}
+          </div>
+        ) : null}
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <>
@@ -317,7 +323,10 @@ const CourseEntityFormDrawer = ({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <DrawerBody className="space-y-4">
-          {readOnly ? renderReadOnlyDetails() : null}
+          {readOnly && (slug === "main-categories" || slug === "sub-categories") ? renderCategoryReadOnly() : null}
+          {readOnly && slug !== "main-categories" && slug !== "sub-categories" ? (
+            <div className="space-y-4">{renderStandardFields(def.fields)}</div>
+          ) : null}
 
           {slug === "main-categories" && (
             <>
@@ -330,8 +339,7 @@ const CourseEntityFormDrawer = ({
                   value={thumbnailFile}
                   onSelect={setThumbnailFile}
                   previewMode="wide"
-                  initialPreviewUrl={thumbnailFile ? null : storedThumb}
-                  initialPreviewName={storedThumb}
+                  initialPreviewUrl={thumbnailFile ? null : thumbnailSrc}
                 />
               ) : null}
               {!readOnly ? renderStandardFields(def.fields.filter((f) => f.name === "status")) : null}
@@ -379,8 +387,7 @@ const CourseEntityFormDrawer = ({
                   value={thumbnailFile}
                   onSelect={setThumbnailFile}
                   previewMode="wide"
-                  initialPreviewUrl={thumbnailFile ? null : storedThumb}
-                  initialPreviewName={storedThumb}
+                  initialPreviewUrl={thumbnailFile ? null : thumbnailSrc}
                 />
               ) : null}
             </>

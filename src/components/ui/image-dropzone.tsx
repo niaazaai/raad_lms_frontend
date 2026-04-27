@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { Label } from "@/components/ui";
 import { MediaImage, Page, Xmark } from "iconoir-react";
 import { cn } from "@/lib/utils";
@@ -31,8 +31,13 @@ const ImageDropzone = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [remotePreviewFailed, setRemotePreviewFailed] = useState(false);
 
   useEffect(() => {
+    setRemotePreviewFailed(false);
+  }, [initialPreviewUrl, value]);
+
+  useLayoutEffect(() => {
     if (!value || value.type === "application/pdf") {
       setPreviewUrl(null);
       return undefined;
@@ -85,7 +90,7 @@ const ImageDropzone = ({
           error && "border-danger"
         )}
       >
-        {value || initialPreviewUrl ? (
+        {value || (initialPreviewUrl && !remotePreviewFailed) ? (
           <div className="relative">
             {value && value.type === "application/pdf" ? (
               <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
@@ -94,16 +99,26 @@ const ImageDropzone = ({
                   {value.name || initialPreviewName || "File"}
                 </span>
               </div>
-            ) : (
+            ) : value && previewUrl ? (
               <img
-                src={previewUrl ?? initialPreviewUrl ?? undefined}
+                src={previewUrl}
                 alt="Preview"
                 className={cn(
                   "object-cover border border-border rounded-lg",
                   previewMode === "square" ? "h-24 w-24" : "h-20 w-full max-w-[240px]"
                 )}
               />
-            )}
+            ) : initialPreviewUrl && !remotePreviewFailed ? (
+              <img
+                src={initialPreviewUrl}
+                alt="Preview"
+                onError={() => setRemotePreviewFailed(true)}
+                className={cn(
+                  "object-cover border border-border rounded-lg",
+                  previewMode === "square" ? "h-24 w-24" : "h-20 w-full max-w-[240px]"
+                )}
+              />
+            ) : null}
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onSelect(null); }}
