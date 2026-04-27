@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
-import { Prohibition, CheckCircle, Eye, EditPencil, Plus, Trash } from "iconoir-react";
+import { Prohibition, CheckCircle, Eye, EditPencil, Plus, Trash, AlbumList } from "iconoir-react";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
 import {
@@ -22,6 +22,7 @@ import {
 import CourseEntityFormDrawer, {
   type CourseEntityDrawerMode,
 } from "../CourseEntityFormDrawer/CourseEntityFormDrawer";
+import MainCategorySubCategoriesDrawer from "../MainCategorySubCategoriesDrawer/MainCategorySubCategoriesDrawer";
 import {
   Button,
   DataTable,
@@ -154,6 +155,8 @@ const CourseEntityList = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<CourseEntityDrawerMode>("create");
   const [drawerEntityId, setDrawerEntityId] = useState<number | null>(null);
+  const [subCategoriesDrawerOpen, setSubCategoriesDrawerOpen] = useState(false);
+  const [subCategoriesMain, setSubCategoriesMain] = useState<{ id: number; title: string } | null>(null);
 
   const resolvedSlug = isSlug(slug) ? slug : null;
   const cfg = resolvedSlug ? COURSE_ENTITY_REGISTRY[resolvedSlug] : null;
@@ -219,6 +222,22 @@ const CourseEntityList = () => {
 
   const closeDrawer = useCallback(() => {
     setDrawerOpen(false);
+  }, []);
+
+  const openSubCategoriesDrawer = useCallback((row: CourseRow) => {
+    const id = row.id;
+    const idNum = typeof id === "number" ? id : Number(id);
+    const canAct = typeof id === "number" || !Number.isNaN(idNum);
+    if (!canAct) return;
+    const numericId = typeof id === "number" ? id : idNum;
+    const title = getTextOrFallback(row.title, "Main category");
+    setSubCategoriesMain({ id: numericId, title });
+    setSubCategoriesDrawerOpen(true);
+  }, []);
+
+  const closeSubCategoriesDrawer = useCallback(() => {
+    setSubCategoriesDrawerOpen(false);
+    setSubCategoriesMain(null);
   }, []);
 
   const applyFiltersToUrl = useCallback(() => {
@@ -302,6 +321,17 @@ const CourseEntityList = () => {
             openViewDrawer(typeof id === "number" ? id : idNum);
           },
         },
+        ...(resolvedSlug === "main-categories"
+          ? [
+              {
+                key: "sub-categories",
+                label: "Sub-categories",
+                icon: <AlbumList className="h-4 w-4" />,
+                permission: COURSE_ENTITY_REGISTRY["sub-categories"].permission,
+                onClick: (row: CourseRow) => openSubCategoriesDrawer(row),
+              },
+            ]
+          : []),
         {
           key: "edit",
           label: "Edit",
@@ -387,6 +417,7 @@ const CourseEntityList = () => {
     patching,
     openViewDrawer,
     openEditDrawer,
+    openSubCategoriesDrawer,
   ]);
 
   if (!resolvedSlug || !cfg) {
@@ -496,6 +527,13 @@ const CourseEntityList = () => {
           />
         </DrawerContent>
       </Drawer>
+
+      <MainCategorySubCategoriesDrawer
+        open={subCategoriesDrawerOpen}
+        onClose={closeSubCategoriesDrawer}
+        mainCategoryId={subCategoriesMain?.id ?? null}
+        mainCategoryTitle={subCategoriesMain?.title ?? ""}
+      />
     </div>
   );
 };

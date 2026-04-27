@@ -255,7 +255,7 @@ const Sidebar = () => {
         <div className="flex h-14 items-center justify-between border-b border-border px-2.5">
           <NavLink to="/dashboard" className="flex min-w-0 items-center gap-2 rounded-md px-1 py-1 hover:bg-muted/60">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-border">
-              <img src="/logo.png" alt="RAAD LMS" className="h-7 w-7 object-contain" />
+              <img src="/logo.png" alt="RAAD LMS" className="h-7  object-contain" />
             </div>
             {!sidebarCollapsed && (
               <div className="min-w-0">
