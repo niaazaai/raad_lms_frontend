@@ -14,7 +14,7 @@ const ErrorFallback = ({ error, resetErrorBoundary }: FallbackProps) => {
         {/* Icon */}
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-danger/10">
           <WarningTriangle className="h-10 w-10 text-danger" />
-        </div>ß
+        </div>
 
         {/* Message */}
         <h1 className="text-2xl font-bold text-foreground">Something went wrong</h1>

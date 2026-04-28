@@ -3,11 +3,11 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import tailwindcss from "@tailwindcss/vite";
 
-export default defineConfig(({ command, mode }) => {
+export default defineConfig(({ command }) => {
   const isBuild = command === "build";
-  
-  const backendUrl = process.env.VITE_API_BASE_URL || 'http://localhost:8000';
-  
+
+  const backendUrl = process.env.VITE_API_BASE_URL || "http://localhost:8000";
+
   if (!isBuild) {
     console.log(`[Vite] Proxy target for /api: ${backendUrl}`);
   }

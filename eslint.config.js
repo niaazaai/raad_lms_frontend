@@ -23,15 +23,9 @@ export default tseslint
       },
       rules: {
         ...reactHooks.configs.recommended.rules,
-        "react-refresh/only-export-components": [
-          "warn",
-          { allowConstantExport: true },
-        ],
+        "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
         "@tanstack/query/exhaustive-deps": "error",
-        "@typescript-eslint/no-unused-vars": [
-          "warn",
-          { argsIgnorePattern: "^_" },
-        ],
+        "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
       },
     }
   )
