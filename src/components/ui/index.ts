@@ -3,6 +3,16 @@ export { Spinner } from "./spinner";
 export { Button, buttonVariants } from "./button";
 export { Input } from "./input";
 export { Label } from "./label";
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
 export { Avatar } from "./avatar";
 export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from "./card";
 export {

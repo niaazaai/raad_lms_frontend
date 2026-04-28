@@ -1,11 +1,42 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { Resolver } from "react-hook-form";
-import { Controller, useFieldArray, useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Attachment, BookStack, Check, Folder, Page, PageEdit, Play, Search } from "iconoir-react";
-import { Button, ImageDropzone, Input, Label, RichTextEditor } from "@/components/ui";
+import {
+  Attachment,
+  Check,
+  EditPencil,
+  Folder,
+  Page,
+  PageEdit,
+  Play,
+  Plus,
+  Search,
+  Trash,
+} from "iconoir-react";
+import {
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerTitle,
+  ImageDropzone,
+  Input,
+  Label,
+  RichTextEditor,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Spinner,
+} from "@/components/ui";
 import {
   COURSE_LANGUAGE_OPTIONS,
   COURSE_LEVEL_OPTIONS,
@@ -14,6 +45,17 @@ import {
   type CourseLanguageValue,
   type CourseLevelValue,
 } from "@/data/enums/courseWizard";
+import { cn } from "@/lib/utils";
+import { API_V1_BASE } from "@/services/apiClient";
+import {
+  getCourseEntityDetailFromResponse,
+  getCourseListFromResponse,
+  useCourseEntityDetail,
+  useCourseEntityList,
+  useCreateCourseEntity,
+  useDeleteCourseEntity,
+  useUpdateCourseEntity,
+} from "../../hooks/useCourseEntity";
 
 const COURSE_DETAIL_FLAG_FIELDS = [
   "is_featured",
@@ -32,26 +74,9 @@ const COURSE_DETAIL_FLAG_LABELS: Record<CourseDetailFlagField, string> = {
   is_best_seller: "Best seller",
   is_free: "Free",
 };
-import { Spinner } from "@/components/ui/spinner";
-import { cn } from "@/lib/utils";
-import { API_V1_BASE } from "@/services/apiClient";
-import {
-  getCourseEntityDetailFromResponse,
-  getCourseListFromResponse,
-  useCourseEntityDetail,
-  useCourseEntityList,
-  useCreateCourseEntity,
-  useUpdateCourseEntity,
-} from "../../hooks/useCourseEntity";
 
-const lessonSchema = z.object({
-  title: z.string().min(1, "Lesson title is required"),
-  description: z.string().optional(),
-});
-
-const fileEntrySchema = z.object({
-  title: z.string().optional(),
-});
+/** Radix Select cannot use empty string — optional numeric FKs use this sentinel */
+const SELECT_NONE_VALUE = "__none__";
 
 const courseLanguageSchema = z.enum(["PASHTOO", "DARI", "ENGLISH"]);
 const courseLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
@@ -59,7 +84,7 @@ const courseLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 const schema = z.object({
   course_main_category_id: z.coerce.number().min(1, "Main category is required"),
   course_sub_category_id: z.coerce.number().min(1, "Sub category is required"),
-  course_module_id: z.coerce.number().min(1, "Module is required"),
+  course_module_id: z.coerce.number().optional(),
   title: z.string().min(1, "Title is required"),
   short_description: z.string().optional(),
   long_description: z.string().optional(),
@@ -70,15 +95,11 @@ const schema = z.object({
   banner: z.string().optional(),
   price: z.coerce.number().optional(),
   instructor_id: z.coerce.number().optional(),
-  estimated_duration: z.coerce.number().optional(),
   is_featured: z.boolean().default(false),
   is_popular: z.boolean().default(false),
   is_new: z.boolean().default(false),
   is_best_seller: z.boolean().default(false),
   is_free: z.boolean().default(false),
-  lessons: z.array(lessonSchema).default([]),
-  downloadable_resources: z.array(fileEntrySchema).default([]),
-  quiz_files: z.array(fileEntrySchema).default([]),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -101,14 +122,9 @@ const steps: StepConfig[] = [
     hint: "Title, media, pricing",
   },
   {
-    id: "modules",
-    title: "Course modules",
-    hint: "Faasl module",
-  },
-  {
     id: "lessons",
     title: "Lessons",
-    hint: "Videos & assignments",
+    hint: "Modules & lesson videos",
   },
   {
     id: "resources",
@@ -177,6 +193,13 @@ function mediaUrlForPreview(path: unknown): string | undefined {
   if (u.startsWith("http://") || u.startsWith("https://")) return u;
   if (u.startsWith("/")) return u;
   return undefined;
+}
+
+function fileLabelFromUrl(path: unknown): string {
+  const u = String(path ?? "").trim();
+  if (!u) return "";
+  const seg = u.split(/[/\\]/).pop();
+  return seg && seg.length > 0 ? seg : u;
 }
 
 function truncateDescription(raw: unknown, max = DESC_MAX_LEN): string {
@@ -302,8 +325,6 @@ function VerticalCourseStepper({
         return <Folder className={ic} strokeWidth={1.5} aria-hidden />;
       case "details":
         return <PageEdit className={ic} strokeWidth={1.5} aria-hidden />;
-      case "modules":
-        return <BookStack className={ic} strokeWidth={1.5} aria-hidden />;
       case "lessons":
         return <Play className={ic} strokeWidth={1.5} aria-hidden />;
       case "resources":
@@ -396,8 +417,24 @@ function VerticalCourseStepper({
   );
 }
 
-const selectTriggerClass =
-  "border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full min-w-0 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60";
+interface FieldLabelProps {
+  htmlFor?: string;
+  children: React.ReactNode;
+  required?: boolean;
+}
+
+function FieldLabel({ htmlFor, children, required }: FieldLabelProps) {
+  return (
+    <Label htmlFor={htmlFor}>
+      <span>{children}</span>
+      {required ? (
+        <span className="text-danger ml-0.5 font-semibold" aria-hidden>
+          *
+        </span>
+      ) : null}
+    </Label>
+  );
+}
 
 const CourseWizardPage = () => {
   const textAreaClassName =
@@ -409,26 +446,60 @@ const CourseWizardPage = () => {
   const viewMode = searchParams.get("mode") === "view";
   const editId = courseId ? Number(courseId) : null;
   const [currentStep, setCurrentStep] = useState(0);
-  const [videoProgress, setVideoProgress] = useState<Record<string, number>>({});
+  /** Persisted course id before route includes `:courseId` (create flow). */
+  const [draftCourseId, setDraftCourseId] = useState<number | null>(null);
+  const effectiveCourseId = editId ?? draftCourseId;
+
+  const queryClient = useQueryClient();
 
   const mainCategoriesQuery = useCourseEntityList("main-categories", { per_page: 200 });
   const subCategoriesQuery = useCourseEntityList("sub-categories", { per_page: 400 });
-  const modulesQuery = useCourseEntityList("course-faasls", { per_page: 200 });
   const instructorsQuery = useCourseEntityList("instructors", { per_page: 200 });
   const detailQuery = useCourseEntityDetail("courses", editId, { enabled: editId != null });
+
+  const modulesQuery = useCourseEntityList(
+    effectiveCourseId != null ? "course-faasls" : null,
+    effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 200 } : undefined,
+    { enabled: effectiveCourseId != null }
+  );
+  const lessonsQuery = useCourseEntityList(
+    effectiveCourseId != null ? "lessons" : null,
+    effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 500 } : undefined,
+    { enabled: effectiveCourseId != null }
+  );
+  const resourcesListQuery = useCourseEntityList(
+    effectiveCourseId != null ? "downloadable-resources" : null,
+    effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 200 } : undefined,
+    { enabled: effectiveCourseId != null }
+  );
+  const quizListQuery = useCourseEntityList(
+    effectiveCourseId != null ? "quiz-files" : null,
+    effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 200 } : undefined,
+    { enabled: effectiveCourseId != null }
+  );
+
   const createMutation = useCreateCourseEntity("courses");
   const updateMutation = useUpdateCourseEntity("courses");
+  const createFaaslMutation = useCreateCourseEntity("course-faasls");
+  const updateFaaslMutation = useUpdateCourseEntity("course-faasls");
+  const deleteFaaslMutation = useDeleteCourseEntity("course-faasls");
+  const createLessonMutation = useCreateCourseEntity("lessons");
+  const updateLessonMutation = useUpdateCourseEntity("lessons");
+  const deleteLessonMutation = useDeleteCourseEntity("lessons");
+  const createResourceMutation = useCreateCourseEntity("downloadable-resources");
+  const updateResourceMutation = useUpdateCourseEntity("downloadable-resources");
+  const deleteResourceMutation = useDeleteCourseEntity("downloadable-resources");
+  const createQuizMutation = useCreateCourseEntity("quiz-files");
+  const updateQuizMutation = useUpdateCourseEntity("quiz-files");
+  const deleteQuizMutation = useDeleteCourseEntity("quiz-files");
 
   const form = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
     defaultValues: {
       course_main_category_id: 0,
       course_sub_category_id: 0,
-      course_module_id: 0,
+      course_module_id: undefined,
       title: "",
-      lessons: [],
-      downloadable_resources: [],
-      quiz_files: [],
       is_featured: false,
       is_popular: false,
       is_new: false,
@@ -439,13 +510,43 @@ const CourseWizardPage = () => {
     },
   });
 
-  const { register, handleSubmit, setValue, watch, control, formState } = form;
+  const { register, handleSubmit, setValue, watch, control, formState, getValues } = form;
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [bannerFile, setBannerFile] = useState<File | null>(null);
-  const lessonsField = useFieldArray({ control: form.control, name: "lessons" });
-  const resourcesField = useFieldArray({ control: form.control, name: "downloadable_resources" });
-  const quizField = useFieldArray({ control: form.control, name: "quiz_files" });
+
+  const [moduleModalOpen, setModuleModalOpen] = useState(false);
+  const [newModuleTitle, setNewModuleTitle] = useState("");
+  const [expandedModules, setExpandedModules] = useState<Record<number, boolean>>({});
+
+  const [resourceDrawerOpen, setResourceDrawerOpen] = useState(false);
+  const [resourceDraft, setResourceDraft] = useState<{
+    id?: number;
+    title: string;
+    file: File | null;
+    existingFileUrl?: string | null;
+  }>({ title: "", file: null });
+
+  const [quizDrawerOpen, setQuizDrawerOpen] = useState(false);
+  const [quizDraft, setQuizDraft] = useState<{
+    id?: number;
+    title: string;
+    file: File | null;
+    existingFileUrl?: string | null;
+  }>({ title: "", file: null });
+
+  const [lessonDialog, setLessonDialog] = useState<{
+    open: boolean;
+    moduleId: number;
+    lessonId: number | null;
+    title: string;
+  }>({ open: false, moduleId: 0, lessonId: null, title: "" });
+
+  const [moduleRenameDialog, setModuleRenameDialog] = useState<{
+    open: boolean;
+    id: number;
+    title: string;
+  }>({ open: false, id: 0, title: "" });
 
   const selectedMain = watch("course_main_category_id");
   const selectedSub = watch("course_sub_category_id");
@@ -497,7 +598,8 @@ const CourseWizardPage = () => {
     if (!detail) return;
     setValue("course_main_category_id", Number(detail.course_main_category_id ?? 0));
     setValue("course_sub_category_id", Number(detail.course_sub_category_id ?? 0));
-    setValue("course_module_id", Number(detail.course_module_id ?? 0));
+    const cm = Number(detail.course_module_id ?? 0);
+    setValue("course_module_id", cm > 0 ? cm : undefined);
     setValue("title", String(detail.title ?? ""));
     setValue("short_description", String(detail.short_description ?? ""));
     setValue("long_description", String(detail.long_description ?? ""));
@@ -507,8 +609,8 @@ const CourseWizardPage = () => {
     setValue("thumbnail", String(detail.thumbnail ?? ""));
     setValue("banner", String(detail.banner ?? ""));
     setValue("price", Number(detail.price ?? 0));
-    setValue("instructor_id", Number(detail.instructor_id ?? 0));
-    setValue("estimated_duration", Number(detail.estimated_duration ?? 0));
+    const instructorId = Number(detail.instructor_id ?? 0);
+    setValue("instructor_id", instructorId > 0 ? instructorId : undefined);
     setValue("is_featured", Boolean(detail.is_featured));
     setValue("is_popular", Boolean(detail.is_popular));
     setValue("is_new", Boolean(detail.is_new));
@@ -525,14 +627,22 @@ const CourseWizardPage = () => {
     return Number.isFinite(n) ? n : 0;
   };
 
+  const modulesRowsStep = useMemo(
+    () => getCourseListFromResponse(modulesQuery.data),
+    [modulesQuery.data]
+  );
+  const lessonsRowsStep = useMemo(
+    () => getCourseListFromResponse(lessonsQuery.data),
+    [lessonsQuery.data]
+  );
+
   const stepState = [
     numId(watchedValues.course_main_category_id) > 0 &&
       numId(watchedValues.course_sub_category_id) > 0,
     String(watchedValues.title ?? "").trim().length > 0,
-    numId(watchedValues.course_module_id) > 0,
-    watchedValues.lessons.length > 0,
-    watchedValues.downloadable_resources.length > 0,
-    watchedValues.quiz_files.length > 0,
+    modulesRowsStep.length >= 1 && lessonsRowsStep.length >= 1,
+    true,
+    true,
   ];
 
   const mainSelected = Boolean(selectedMain && Number(selectedMain) > 0);
@@ -553,7 +663,10 @@ const CourseWizardPage = () => {
     const payload: Record<string, unknown> = {
       course_main_category_id: values.course_main_category_id,
       course_sub_category_id: values.course_sub_category_id,
-      course_module_id: values.course_module_id,
+      course_module_id:
+        values.course_module_id != null && Number(values.course_module_id) > 0
+          ? Number(values.course_module_id)
+          : null,
       title: values.title,
       short_description: values.short_description,
       long_description: values.long_description,
@@ -562,7 +675,6 @@ const CourseWizardPage = () => {
       level: values.level,
       price: values.price,
       instructor_id: values.instructor_id,
-      estimated_duration: values.estimated_duration,
       is_featured: values.is_featured,
       is_popular: values.is_popular,
       is_new: values.is_new,
@@ -583,9 +695,10 @@ const CourseWizardPage = () => {
       payload.banner = values.banner ?? "";
     }
 
-    if (editId && !Number.isNaN(editId)) {
+    const targetId = editId ?? draftCourseId;
+    if (targetId && !Number.isNaN(targetId)) {
       updateMutation.mutate(
-        { id: editId, body: payload },
+        { id: targetId, body: payload },
         { onSuccess: () => navigate("/course/courses") }
       );
       return;
@@ -593,17 +706,93 @@ const CourseWizardPage = () => {
     createMutation.mutate(payload, { onSuccess: () => navigate("/course/courses") });
   };
 
-  const simulateVideoUpload = (key: string) => {
-    let progress = 0;
-    const timer = setInterval(() => {
-      progress += 10;
-      setVideoProgress((prev) => ({ ...prev, [key]: Math.min(progress, 100) }));
-      if (progress >= 100) clearInterval(timer);
-    }, 250);
+  const ensureCoursePersisted = async (): Promise<number> => {
+    if (editId != null && !Number.isNaN(editId)) return editId;
+    if (draftCourseId != null) return draftCourseId;
+    const values = getValues();
+    const payload: Record<string, unknown> = {
+      course_main_category_id: values.course_main_category_id,
+      course_sub_category_id: values.course_sub_category_id,
+      course_module_id:
+        values.course_module_id != null && Number(values.course_module_id) > 0
+          ? Number(values.course_module_id)
+          : null,
+      title: values.title,
+      short_description: values.short_description,
+      long_description: values.long_description,
+      prerequisites: values.prerequisites,
+      language: values.language,
+      level: values.level,
+      price: values.price,
+      instructor_id: values.instructor_id,
+      is_featured: values.is_featured,
+      is_popular: values.is_popular,
+      is_new: values.is_new,
+      is_best_seller: values.is_best_seller,
+      is_free: values.is_free,
+      status: "active",
+    };
+    if (thumbnailFile) payload.thumbnail_file = thumbnailFile;
+    else payload.thumbnail = values.thumbnail ?? "";
+    if (bannerFile) payload.banner_file = bannerFile;
+    else payload.banner = values.banner ?? "";
+
+    const res = await createMutation.mutateAsync(payload);
+    const fromEnvelope = getCourseEntityDetailFromResponse(res as unknown);
+    const fallbackId =
+      res && typeof res === "object" && res !== null && "id" in res
+        ? (res as { id?: unknown }).id
+        : undefined;
+    const nid = Number(fromEnvelope?.id ?? fallbackId ?? 0);
+    if (!nid) throw new Error("Course could not be saved");
+    setDraftCourseId(nid);
+    await queryClient.invalidateQueries({ queryKey: ["course", "entity", "courses"] });
+    return nid;
+  };
+
+  const advanceStep = async () => {
+    try {
+      if (currentStep === 1 && !viewMode) {
+        await ensureCoursePersisted();
+      }
+      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+    } catch {
+      /* create/update draft failed — stay on step */
+    }
+  };
+
+  const goToStep = async (index: number) => {
+    if (index > currentStep && index >= 2 && !editId && draftCourseId == null && !viewMode) {
+      try {
+        await ensureCoursePersisted();
+      } catch {
+        return;
+      }
+    }
+    setCurrentStep(index);
+  };
+
+  const invalidateCourseLists = () => {
+    void queryClient.invalidateQueries({ queryKey: ["course"] });
   };
 
   const mainLoading = mainCategoriesQuery.isFetching;
   const subLoading = subCategoriesQuery.isFetching;
+
+  const instructorRows = useMemo(
+    () =>
+      (instructorsQuery.data as { data?: Array<Record<string, unknown>> } | undefined)?.data ?? [],
+    [instructorsQuery.data]
+  );
+
+  const resourcesRows = useMemo(
+    () => getCourseListFromResponse(resourcesListQuery.data),
+    [resourcesListQuery.data]
+  );
+  const quizRowsList = useMemo(
+    () => getCourseListFromResponse(quizListQuery.data),
+    [quizListQuery.data]
+  );
 
   return (
     <div
@@ -611,7 +800,7 @@ const CourseWizardPage = () => {
         "flex min-h-0 w-full flex-col",
         currentStep === 0
           ? "h-full max-h-full flex-1 gap-4 overflow-hidden"
-          : "space-y-6 p-4 md:p-6"
+          : "space-y-6"
       )}
     >
       <div className={cn(currentStep === 0 && "shrink-0")}>
@@ -637,7 +826,7 @@ const CourseWizardPage = () => {
             stepsConfig={steps}
             currentStep={currentStep}
             stepComplete={stepState}
-            onStepChange={setCurrentStep}
+            onStepChange={goToStep}
           />
         </div>
 
@@ -851,14 +1040,23 @@ const CourseWizardPage = () => {
               <input type="hidden" {...register("banner")} />
 
               <div className="space-y-1.5">
-                <Label>Title</Label>
-                <Input {...register("title")} disabled={viewMode} />
+                <FieldLabel htmlFor="course-title" required>
+                  Course title
+                </FieldLabel>
+                <Input
+                  id="course-title"
+                  placeholder="e.g. Practical accounting fundamentals"
+                  {...register("title")}
+                  disabled={viewMode}
+                />
               </div>
 
               <div className="space-y-1.5">
-                <Label>Short description</Label>
+                <FieldLabel htmlFor="course-short-description">Short description</FieldLabel>
                 <textarea
+                  id="course-short-description"
                   className={textAreaClassName}
+                  placeholder="One or two lines for cards and listings (shown in browse views)"
                   {...register("short_description")}
                   disabled={viewMode}
                 />
@@ -866,7 +1064,7 @@ const CourseWizardPage = () => {
 
               <div className="grid gap-4 lg:grid-cols-2">
                 <div className="min-w-0 space-y-1.5">
-                  <Label>Long description</Label>
+                  <FieldLabel>Long description</FieldLabel>
                   <Controller
                     name="long_description"
                     control={control}
@@ -876,12 +1074,13 @@ const CourseWizardPage = () => {
                         onChange={field.onChange}
                         disabled={viewMode}
                         minHeight="min-h-[220px]"
+                        placeholder="Describe modules, learning outcomes, format, and ideal audience…"
                       />
                     )}
                   />
                 </div>
                 <div className="min-w-0 space-y-1.5">
-                  <Label>Prerequisites</Label>
+                  <FieldLabel>Prerequisites</FieldLabel>
                   <Controller
                     name="prerequisites"
                     control={control}
@@ -891,65 +1090,108 @@ const CourseWizardPage = () => {
                         onChange={field.onChange}
                         disabled={viewMode}
                         minHeight="min-h-[220px]"
+                        placeholder="Prior courses, skills, or experience learners should have…"
                       />
                     )}
                   />
                 </div>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div className="min-w-0 space-y-1.5">
-                  <Label>Language</Label>
-                  <select
-                    className={selectTriggerClass}
-                    {...register("language")}
+                  <FieldLabel htmlFor="course-language">Language</FieldLabel>
+                  <Controller
+                    name="language"
+                    control={control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={viewMode}
+                      >
+                        <SelectTrigger id="course-language">
+                          <SelectValue placeholder="Teaching language" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COURSE_LANGUAGE_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <FieldLabel htmlFor="course-level">Level</FieldLabel>
+                  <Controller
+                    name="level"
+                    control={control}
+                    render={({ field }) => (
+                      <Select value={field.value} onValueChange={field.onChange} disabled={viewMode}>
+                        <SelectTrigger id="course-level">
+                          <SelectValue placeholder="Difficulty" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {COURSE_LEVEL_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <FieldLabel htmlFor="course-price">Price</FieldLabel>
+                  <Input
+                    id="course-price"
+                    type="number"
+                    step="any"
+                    placeholder="0.00"
+                    {...register("price")}
                     disabled={viewMode}
-                  >
-                    {COURSE_LANGUAGE_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
                 <div className="min-w-0 space-y-1.5">
-                  <Label>Level</Label>
-                  <select className={selectTriggerClass} {...register("level")} disabled={viewMode}>
-                    {COURSE_LEVEL_OPTIONS.map((opt) => (
-                      <option key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="min-w-0 space-y-1.5">
-                  <Label>Price</Label>
-                  <Input type="number" step="any" {...register("price")} disabled={viewMode} />
-                </div>
-                <div className="min-w-0 space-y-1.5">
-                  <Label>Instructor</Label>
-                  <select
-                    className={selectTriggerClass}
-                    {...register("instructor_id")}
-                    disabled={viewMode}
-                  >
-                    <option value="">Select instructor</option>
-                    {(
-                      (
-                        instructorsQuery.data as
-                          | { data?: Array<Record<string, unknown>> }
-                          | undefined
-                      )?.data ?? []
-                    ).map((row) => (
-                      <option key={String(row.id)} value={Number(row.user_id ?? row.id)}>
-                        {String(row.user_name ?? row.specialization ?? `Instructor #${row.id}`)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="min-w-0 space-y-1.5">
-                  <Label>Course duration (min)</Label>
-                  <Input type="number" {...register("estimated_duration")} disabled={viewMode} />
+                  <FieldLabel htmlFor="course-instructor">Instructor</FieldLabel>
+                  <Controller
+                    name="instructor_id"
+                    control={control}
+                    render={({ field }) => {
+                      const sel =
+                        field.value != null && Number(field.value) > 0
+                          ? String(Number(field.value))
+                          : SELECT_NONE_VALUE;
+                      return (
+                        <Select
+                          value={sel}
+                          onValueChange={(next) => {
+                            if (next === SELECT_NONE_VALUE) field.onChange(undefined);
+                            else field.onChange(Number(next));
+                          }}
+                          disabled={viewMode}
+                        >
+                          <SelectTrigger id="course-instructor">
+                            <SelectValue placeholder="Choose an instructor" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={SELECT_NONE_VALUE}>No instructor</SelectItem>
+                            {instructorRows.map((row) => (
+                              <SelectItem
+                                key={String(row.id)}
+                                value={String(Number(row.user_id ?? row.id))}
+                              >
+                                {String(row.user_name ?? row.specialization ?? `Instructor #${row.id}`)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      );
+                    }}
+                  />
                 </div>
               </div>
 
@@ -970,7 +1212,7 @@ const CourseWizardPage = () => {
                 <ImageDropzone
                   accept="image/jpeg,image/png,image/webp,image/gif"
                   label="Banner"
-                  hint="Wide image — JPEG, PNG, WebP or GIF"
+                  hint="Wide banner — JPEG, PNG, WebP or GIF"
                   value={bannerFile}
                   onSelect={(file) => {
                     setBannerFile(file);
@@ -982,12 +1224,14 @@ const CourseWizardPage = () => {
                 />
               </div>
 
-              <div className="flex flex-wrap gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
                 {COURSE_DETAIL_FLAG_FIELDS.map((key) => (
                   <label
                     key={key}
                     className={cn(
-                      "flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/15 px-4 py-3 transition-colors hover:bg-muted/35",
+                      "relative flex min-h-[72px] cursor-pointer flex-col items-center justify-center gap-2 rounded-lg border border-border bg-card px-2 py-3 text-center shadow-sm transition-colors",
+                      "hover:border-primary/35 hover:bg-muted/20",
+                      "[&:has(:checked)]:border-primary [&:has(:checked)]:bg-primary/10",
                       viewMode && "pointer-events-none opacity-60"
                     )}
                   >
@@ -999,19 +1243,17 @@ const CourseWizardPage = () => {
                     />
                     <span
                       className={cn(
-                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-background shadow-inner",
-                        "transition-[border-color,background-color] duration-200 ease-out",
+                        "flex h-5 w-5 shrink-0 items-center justify-center rounded border border-border bg-background transition-all duration-200 ease-out",
                         "peer-checked:border-primary peer-checked:bg-primary",
-                        "peer-focus-visible:ring-2 peer-focus-visible:ring-ring",
                         "peer-checked:[&_svg]:scale-100 peer-checked:[&_svg]:opacity-100"
                       )}
                     >
                       <Check
-                        className="h-6 w-6 scale-50 stroke-[2.5] text-white opacity-0 transition-all duration-200 ease-out"
+                        className="h-3.5 w-3.5 scale-50 stroke-[2.5] text-white opacity-0 transition-all duration-200 ease-out"
                         aria-hidden
                       />
                     </span>
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-xs font-medium leading-snug text-foreground">
                       {COURSE_DETAIL_FLAG_LABELS[key]}
                     </span>
                   </label>
@@ -1020,153 +1262,583 @@ const CourseWizardPage = () => {
             </div>
           )}
 
-          {currentStep === 2 && (
-            <div className="space-y-1.5">
-              <Label>Course module (Faasl)</Label>
-              <select
-                className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
-                {...register("course_module_id")}
-                disabled={viewMode}
-              >
-                <option value="">Select module</option>
-                {(
-                  (modulesQuery.data as { data?: Array<Record<string, unknown>> } | undefined)
-                    ?.data ?? []
-                ).map((row) => (
-                  <option key={String(row.id)} value={Number(row.id)}>
-                    {String(row.title ?? "")}
-                  </option>
-                ))}
-              </select>
+          {currentStep === 2 && effectiveCourseId != null && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Lessons</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Modules (Faasl) group your lesson videos — expand each module to manage lessons.
+                  </p>
+                </div>
+                {!viewMode ? (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      setNewModuleTitle("");
+                      setModuleModalOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                    New Module
+                  </Button>
+                ) : null}
+              </div>
+
+              {modulesRowsStep.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                  No modules yet — click &quot;New Module&quot; to create one for this course.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {modulesRowsStep.map((mod) => {
+                    const mid = Number(mod.id);
+                    const open = expandedModules[mid] ?? true;
+                    const lessonsForModule = lessonsRowsStep.filter(
+                      (row) => Number(row.course_module_id) === mid
+                    );
+                    return (
+                      <div key={mid} className="overflow-hidden rounded-lg border border-border bg-card">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
+                          onClick={() =>
+                            setExpandedModules((prev) => ({ ...prev, [mid]: !open }))
+                          }
+                        >
+                          <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
+                            {String(mod.title ?? "")}
+                          </span>
+                          {!viewMode ? (
+                            <span className="flex shrink-0 items-center gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setModuleRenameDialog({
+                                    open: true,
+                                    id: mid,
+                                    title: String(mod.title ?? ""),
+                                  });
+                                }}
+                              >
+                                <EditPencil className="h-4 w-4" strokeWidth={1.5} />
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-danger hover:text-danger"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  deleteFaaslMutation.mutate(mid, {
+                                    onSuccess: () => invalidateCourseLists(),
+                                  });
+                                }}
+                              >
+                                <Trash className="h-4 w-4" strokeWidth={1.5} />
+                              </Button>
+                            </span>
+                          ) : null}
+                        </button>
+                        {open ? (
+                          <div className="space-y-2 border-t border-border bg-muted/10 px-4 py-3">
+                            {lessonsForModule.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">
+                                No lessons in this module yet.
+                              </p>
+                            ) : (
+                              lessonsForModule.map((lesson) => {
+                                const lid = Number(lesson.id);
+                                return (
+                                  <div
+                                    key={lid}
+                                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                                  >
+                                    <span className="min-w-0 truncate text-sm font-medium">
+                                      {String(lesson.title ?? "")}
+                                    </span>
+                                    {!viewMode ? (
+                                      <span className="flex shrink-0 items-center gap-1">
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-2"
+                                          onClick={() =>
+                                            setLessonDialog({
+                                              open: true,
+                                              moduleId: mid,
+                                              lessonId: lid,
+                                              title: String(lesson.title ?? ""),
+                                            })
+                                          }
+                                        >
+                                          <EditPencil className="h-4 w-4" strokeWidth={1.5} />
+                                        </Button>
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-8 px-2 text-danger hover:text-danger"
+                                          onClick={() =>
+                                            deleteLessonMutation.mutate(lid, {
+                                              onSuccess: () => invalidateCourseLists(),
+                                            })
+                                          }
+                                        >
+                                          <Trash className="h-4 w-4" strokeWidth={1.5} />
+                                        </Button>
+                                      </span>
+                                    ) : null}
+                                  </div>
+                                );
+                              })
+                            )}
+                            {!viewMode ? (
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="mt-1"
+                                onClick={() =>
+                                  setLessonDialog({
+                                    open: true,
+                                    moduleId: mid,
+                                    lessonId: null,
+                                    title: "",
+                                  })
+                                }
+                              >
+                                <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                                Add lesson
+                              </Button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
-          {currentStep === 3 && (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <h3 className="font-medium">Lessons</h3>
-                {!viewMode && (
+          {currentStep === 2 && effectiveCourseId == null && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Save <span className="font-medium text-foreground">Course details</span> first (click
+              Next on that step), then you can add modules and lessons here.
+            </div>
+          )}
+
+          {currentStep === 3 && effectiveCourseId != null && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Downloadable resources</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Add files learners can download — drag a file into the drawer or pick one on disk.
+                  </p>
+                </div>
+                {!viewMode ? (
                   <Button
                     type="button"
-                    size="sm"
-                    onClick={() => lessonsField.append({ title: "", description: "" })}
+                    onClick={() => {
+                      setResourceDraft({ title: "", file: null, existingFileUrl: null });
+                      setResourceDrawerOpen(true);
+                    }}
                   >
-                    Add lesson
+                    <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                    New Resource
                   </Button>
-                )}
+                ) : null}
               </div>
-              {lessonsField.fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2 rounded-md border border-border p-3">
-                  <Input
-                    placeholder="Lesson title"
-                    {...register(`lessons.${idx}.title`)}
-                    disabled={viewMode}
-                  />
-                  <textarea
-                    className={textAreaClassName}
-                    placeholder="Lesson description"
-                    {...register(`lessons.${idx}.description`)}
-                    disabled={viewMode}
-                  />
-                  <div className="space-y-1">
-                    <Label>Lesson video</Label>
-                    <input
-                      type="file"
-                      accept="video/*"
-                      disabled={viewMode}
-                      onChange={() => simulateVideoUpload(`lesson-${idx}`)}
-                    />
-                    {videoProgress[`lesson-${idx}`] !== undefined ? (
-                      <div className="h-2 rounded bg-muted">
-                        <div
-                          className="h-2 rounded bg-primary"
-                          style={{ width: `${videoProgress[`lesson-${idx}`]}%` }}
+
+              {resourcesRows.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                  No downloadable resources yet — click &quot;New Resource&quot; to add a file.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {resourcesRows.map((row) => {
+                    const rid = Number(row.id);
+                    const rtitle = String(row.title ?? "");
+                    const rurl = String(row.resource_file_url ?? "");
+                    return (
+                      <div
+                        key={rid}
+                        className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+                      >
+                        {!viewMode ? (
+                          <div className="absolute right-2 top-2 z-10 flex gap-1 rounded-md bg-card/90 p-0.5 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => {
+                                setResourceDraft({
+                                  id: rid,
+                                  title: rtitle,
+                                  file: null,
+                                  existingFileUrl: rurl || null,
+                                });
+                                setResourceDrawerOpen(true);
+                              }}
+                              aria-label="Edit resource"
+                            >
+                              <EditPencil className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-danger hover:text-danger"
+                              onClick={() =>
+                                deleteResourceMutation.mutate(rid, {
+                                  onSuccess: () => invalidateCourseLists(),
+                                })
+                              }
+                              aria-label="Delete resource"
+                            >
+                              <Trash className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
+                          </div>
+                        ) : null}
+                        <div className="flex items-start gap-3 pr-14">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <Attachment className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-foreground">{rtitle}</p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground" title={rurl}>
+                              {fileLabelFromUrl(rurl) || "File attached"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Drawer open={resourceDrawerOpen} onClose={() => setResourceDrawerOpen(false)}>
+                <DrawerOverlay />
+                <DrawerContent>
+                  <DrawerHeader>
+                    <DrawerTitle>
+                      {resourceDraft.id != null ? "Edit resource" : "New resource"}
+                    </DrawerTitle>
+                  </DrawerHeader>
+                  <DrawerBody>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="resource-drawer-title">Title</Label>
+                        <Input
+                          id="resource-drawer-title"
+                          value={resourceDraft.title}
+                          onChange={(e) =>
+                            setResourceDraft((d) => ({ ...d, title: e.target.value }))
+                          }
+                          placeholder="Resource title"
+                          disabled={viewMode}
                         />
                       </div>
-                    ) : null}
-                  </div>
-                  {!viewMode ? (
+                      <ImageDropzone
+                        accept="*/*"
+                        label="File"
+                        hint="Drag and drop or click to choose — PDF, ZIP, documents…"
+                        value={resourceDraft.file}
+                        onSelect={(file) => setResourceDraft((d) => ({ ...d, file }))}
+                        previewMode="square"
+                        initialPreviewUrl={
+                          resourceDraft.file
+                            ? null
+                            : mediaUrlForPreview(resourceDraft.existingFileUrl)
+                        }
+                        initialPreviewName={
+                          resourceDraft.file
+                            ? null
+                            : fileLabelFromUrl(resourceDraft.existingFileUrl) || null
+                        }
+                      />
+                    </div>
+                  </DrawerBody>
+                  <DrawerFooter>
+                    <Button type="button" variant="outline" onClick={() => setResourceDrawerOpen(false)}>
+                      Cancel
+                    </Button>
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => lessonsField.remove(idx)}
+                      disabled={
+                        createResourceMutation.isPending ||
+                        updateResourceMutation.isPending ||
+                        viewMode ||
+                        (!resourceDraft.title.trim() &&
+                          resourceDraft.id == null &&
+                          resourceDraft.file == null)
+                      }
+                      onClick={() => {
+                        const cid = effectiveCourseId;
+                        if (!cid) return;
+                        const title =
+                          resourceDraft.title.trim() ||
+                          (resourceDraft.file?.name ? resourceDraft.file.name : "Untitled");
+                        if (resourceDraft.id != null) {
+                          const body: Record<string, unknown> = { title };
+                          if (resourceDraft.file) body.resource_file = resourceDraft.file;
+                          updateResourceMutation.mutate(
+                            { id: resourceDraft.id, body },
+                            {
+                              onSuccess: () => {
+                                invalidateCourseLists();
+                                setResourceDrawerOpen(false);
+                                setResourceDraft({ title: "", file: null, existingFileUrl: null });
+                              },
+                            }
+                          );
+                          return;
+                        }
+                        if (!resourceDraft.file) return;
+                        createResourceMutation.mutate(
+                          {
+                            course_id: cid,
+                            title,
+                            resource_file: resourceDraft.file,
+                            uploaded_at: new Date().toISOString(),
+                          },
+                          {
+                            onSuccess: () => {
+                              invalidateCourseLists();
+                              setResourceDrawerOpen(false);
+                              setResourceDraft({ title: "", file: null, existingFileUrl: null });
+                            },
+                          }
+                        );
+                      }}
                     >
-                      Remove lesson
+                      {createResourceMutation.isPending || updateResourceMutation.isPending ? (
+                        <Spinner className="h-4 w-4" />
+                      ) : resourceDraft.id != null ? (
+                        "Save changes"
+                      ) : (
+                        "Add resource"
+                      )}
                     </Button>
-                  ) : null}
-                </div>
-              ))}
+                  </DrawerFooter>
+                </DrawerContent>
+              </Drawer>
             </div>
           )}
 
-          {currentStep === 4 && (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <h3 className="font-medium">Downloadable resources</h3>
+          {currentStep === 3 && effectiveCourseId == null && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Save <span className="font-medium text-foreground">Course details</span> first to manage
+              downloadable resources.
+            </div>
+          )}
+
+          {currentStep === 4 && effectiveCourseId != null && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Quiz files</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Upload quiz or assessment files — same flow as downloadable resources.
+                  </p>
+                </div>
                 {!viewMode ? (
                   <Button
                     type="button"
-                    size="sm"
-                    onClick={() => resourcesField.append({ title: "" })}
+                    onClick={() => {
+                      setQuizDraft({ title: "", file: null, existingFileUrl: null });
+                      setQuizDrawerOpen(true);
+                    }}
                   >
-                    Add file
+                    <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                    New Quiz file
                   </Button>
                 ) : null}
               </div>
-              {resourcesField.fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2 rounded-md border border-border p-3">
-                  <Input
-                    placeholder="Optional title"
-                    {...register(`downloadable_resources.${idx}.title`)}
-                    disabled={viewMode}
-                  />
-                  <input type="file" disabled={viewMode} />
-                  {!viewMode ? (
+
+              {quizRowsList.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                  No quiz files yet — click &quot;New Quiz file&quot; to upload one.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {quizRowsList.map((row) => {
+                    const qid = Number(row.id);
+                    const qtitle = String(row.title ?? "");
+                    const qurl = String(row.quiz_file_url ?? "");
+                    return (
+                      <div
+                        key={qid}
+                        className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 shadow-sm transition-shadow hover:shadow-md"
+                      >
+                        {!viewMode ? (
+                          <div className="absolute right-2 top-2 z-10 flex gap-1 rounded-md bg-card/90 p-0.5 opacity-0 shadow-sm backdrop-blur-sm transition-opacity group-hover:opacity-100">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2"
+                              onClick={() => {
+                                setQuizDraft({
+                                  id: qid,
+                                  title: qtitle,
+                                  file: null,
+                                  existingFileUrl: qurl || null,
+                                });
+                                setQuizDrawerOpen(true);
+                              }}
+                              aria-label="Edit quiz file"
+                            >
+                              <EditPencil className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-danger hover:text-danger"
+                              onClick={() =>
+                                deleteQuizMutation.mutate(qid, {
+                                  onSuccess: () => invalidateCourseLists(),
+                                })
+                              }
+                              aria-label="Delete quiz file"
+                            >
+                              <Trash className="h-4 w-4" strokeWidth={1.5} />
+                            </Button>
+                          </div>
+                        ) : null}
+                        <div className="flex items-start gap-3 pr-14">
+                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
+                            <Page className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate font-medium text-foreground">{qtitle}</p>
+                            <p className="mt-1 truncate text-xs text-muted-foreground" title={qurl}>
+                              {fileLabelFromUrl(qurl) || "File attached"}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <Drawer open={quizDrawerOpen} onClose={() => setQuizDrawerOpen(false)}>
+                <DrawerOverlay />
+                <DrawerContent>
+                  <DrawerHeader>
+                    <DrawerTitle>
+                      {quizDraft.id != null ? "Edit quiz file" : "New quiz file"}
+                    </DrawerTitle>
+                  </DrawerHeader>
+                  <DrawerBody>
+                    <div className="space-y-4">
+                      <div className="space-y-1.5">
+                        <Label htmlFor="quiz-drawer-title">Title</Label>
+                        <Input
+                          id="quiz-drawer-title"
+                          value={quizDraft.title}
+                          onChange={(e) => setQuizDraft((d) => ({ ...d, title: e.target.value }))}
+                          placeholder="Quiz title"
+                          disabled={viewMode}
+                        />
+                      </div>
+                      <ImageDropzone
+                        accept="*/*"
+                        label="File"
+                        hint="Drag and drop or click to choose a quiz file"
+                        value={quizDraft.file}
+                        onSelect={(file) => setQuizDraft((d) => ({ ...d, file }))}
+                        previewMode="square"
+                        initialPreviewUrl={
+                          quizDraft.file ? null : mediaUrlForPreview(quizDraft.existingFileUrl)
+                        }
+                        initialPreviewName={
+                          quizDraft.file
+                            ? null
+                            : fileLabelFromUrl(quizDraft.existingFileUrl) || null
+                        }
+                      />
+                    </div>
+                  </DrawerBody>
+                  <DrawerFooter>
+                    <Button type="button" variant="outline" onClick={() => setQuizDrawerOpen(false)}>
+                      Cancel
+                    </Button>
                     <Button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => resourcesField.remove(idx)}
+                      disabled={
+                        createQuizMutation.isPending ||
+                        updateQuizMutation.isPending ||
+                        viewMode ||
+                        (!quizDraft.title.trim() && quizDraft.id == null && quizDraft.file == null)
+                      }
+                      onClick={() => {
+                        const cid = effectiveCourseId;
+                        if (!cid) return;
+                        const title =
+                          quizDraft.title.trim() ||
+                          (quizDraft.file?.name ? quizDraft.file.name : "Untitled");
+                        if (quizDraft.id != null) {
+                          const body: Record<string, unknown> = { title };
+                          if (quizDraft.file) body.quiz_file = quizDraft.file;
+                          updateQuizMutation.mutate(
+                            { id: quizDraft.id, body },
+                            {
+                              onSuccess: () => {
+                                invalidateCourseLists();
+                                setQuizDrawerOpen(false);
+                                setQuizDraft({ title: "", file: null, existingFileUrl: null });
+                              },
+                            }
+                          );
+                          return;
+                        }
+                        if (!quizDraft.file) return;
+                        createQuizMutation.mutate(
+                          {
+                            course_id: cid,
+                            title,
+                            quiz_file: quizDraft.file,
+                            uploaded_at: new Date().toISOString(),
+                          },
+                          {
+                            onSuccess: () => {
+                              invalidateCourseLists();
+                              setQuizDrawerOpen(false);
+                              setQuizDraft({ title: "", file: null, existingFileUrl: null });
+                            },
+                          }
+                        );
+                      }}
                     >
-                      Remove
+                      {createQuizMutation.isPending || updateQuizMutation.isPending ? (
+                        <Spinner className="h-4 w-4" />
+                      ) : quizDraft.id != null ? (
+                        "Save changes"
+                      ) : (
+                        "Add quiz file"
+                      )}
                     </Button>
-                  ) : null}
-                </div>
-              ))}
+                  </DrawerFooter>
+                </DrawerContent>
+              </Drawer>
             </div>
           )}
 
-          {currentStep === 5 && (
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <h3 className="font-medium">Quiz files</h3>
-                {!viewMode ? (
-                  <Button type="button" size="sm" onClick={() => quizField.append({ title: "" })}>
-                    Add file
-                  </Button>
-                ) : null}
-              </div>
-              {quizField.fields.map((field, idx) => (
-                <div key={field.id} className="space-y-2 rounded-md border border-border p-3">
-                  <Input
-                    placeholder="Optional title"
-                    {...register(`quiz_files.${idx}.title`)}
-                    disabled={viewMode}
-                  />
-                  <input type="file" disabled={viewMode} />
-                  {!viewMode ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => quizField.remove(idx)}
-                    >
-                      Remove
-                    </Button>
-                  ) : null}
-                </div>
-              ))}
+          {currentStep === 4 && effectiveCourseId == null && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Save <span className="font-medium text-foreground">Course details</span> first to manage quiz
+              files.
             </div>
           )}
 
@@ -1187,10 +1859,7 @@ const CourseWizardPage = () => {
                 Cancel
               </Button>
               {currentStep < steps.length - 1 ? (
-                <Button
-                  type="button"
-                  onClick={() => setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1))}
-                >
+                <Button type="button" onClick={() => void advanceStep()}>
                   Next
                 </Button>
               ) : (
@@ -1209,6 +1878,254 @@ const CourseWizardPage = () => {
           </div>
         </section>
       </form>
+
+      {moduleModalOpen ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
+          role="presentation"
+          onClick={() => setModuleModalOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="new-module-heading"
+            className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="new-module-heading" className="text-lg font-semibold text-foreground">
+              New module
+            </h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Modules belong to this course and contain your lessons.
+            </p>
+            <div className="mt-4 space-y-1.5">
+              <Label htmlFor="new-module-input">Title</Label>
+              <Input
+                id="new-module-input"
+                value={newModuleTitle}
+                onChange={(e) => setNewModuleTitle(e.target.value)}
+                placeholder="e.g. Introduction"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setModuleModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !newModuleTitle.trim() ||
+                  createFaaslMutation.isPending ||
+                  effectiveCourseId == null
+                }
+                onClick={() => {
+                  const cid = effectiveCourseId;
+                  if (!cid || !newModuleTitle.trim()) return;
+                  createFaaslMutation.mutate(
+                    { course_id: cid, title: newModuleTitle.trim() },
+                    {
+                      onSuccess: (res) => {
+                        const fromEnvelope = getCourseEntityDetailFromResponse(res as unknown);
+                        const fallbackId =
+                          res && typeof res === "object" && res !== null && "id" in res
+                            ? (res as { id?: unknown }).id
+                            : undefined;
+                        const nid = Number(fromEnvelope?.id ?? fallbackId ?? 0);
+                        if (nid) setExpandedModules((prev) => ({ ...prev, [nid]: true }));
+                        setModuleModalOpen(false);
+                        setNewModuleTitle("");
+                        invalidateCourseLists();
+                      },
+                    }
+                  );
+                }}
+              >
+                {createFaaslMutation.isPending ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  "Create"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {moduleRenameDialog.open ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
+          role="presentation"
+          onClick={() => setModuleRenameDialog({ open: false, id: 0, title: "" })}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rename-module-heading"
+            className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="rename-module-heading" className="text-lg font-semibold text-foreground">
+              Rename module
+            </h3>
+            <div className="mt-4 space-y-1.5">
+              <Label htmlFor="rename-module-input">Title</Label>
+              <Input
+                id="rename-module-input"
+                value={moduleRenameDialog.title}
+                onChange={(e) =>
+                  setModuleRenameDialog((d) => ({ ...d, title: e.target.value }))
+                }
+                placeholder="Module title"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setModuleRenameDialog({ open: false, id: 0, title: "" })}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !moduleRenameDialog.title.trim() ||
+                  updateFaaslMutation.isPending
+                }
+                onClick={() => {
+                  updateFaaslMutation.mutate(
+                    {
+                      id: moduleRenameDialog.id,
+                      body: { title: moduleRenameDialog.title.trim() },
+                    },
+                    {
+                      onSuccess: () => {
+                        setModuleRenameDialog({ open: false, id: 0, title: "" });
+                        invalidateCourseLists();
+                      },
+                    }
+                  );
+                }}
+              >
+                {updateFaaslMutation.isPending ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {lessonDialog.open ? (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
+          role="presentation"
+          onClick={() =>
+            setLessonDialog({
+              open: false,
+              moduleId: 0,
+              lessonId: null,
+              title: "",
+            })
+          }
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lesson-dialog-heading"
+            className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="lesson-dialog-heading" className="text-lg font-semibold text-foreground">
+              {lessonDialog.lessonId != null ? "Edit lesson" : "New lesson"}
+            </h3>
+            <div className="mt-4 space-y-1.5">
+              <Label htmlFor="lesson-title-input">Title</Label>
+              <Input
+                id="lesson-title-input"
+                value={lessonDialog.title}
+                onChange={(e) =>
+                  setLessonDialog((d) => ({ ...d, title: e.target.value }))
+                }
+                placeholder="Lesson title"
+              />
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() =>
+                  setLessonDialog({
+                    open: false,
+                    moduleId: 0,
+                    lessonId: null,
+                    title: "",
+                  })
+                }
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                disabled={
+                  !lessonDialog.title.trim() ||
+                  createLessonMutation.isPending ||
+                  updateLessonMutation.isPending ||
+                  effectiveCourseId == null
+                }
+                onClick={() => {
+                  const cid = effectiveCourseId;
+                  if (!cid || !lessonDialog.title.trim()) return;
+                  const title = lessonDialog.title.trim();
+                  if (lessonDialog.lessonId != null) {
+                    updateLessonMutation.mutate(
+                      { id: lessonDialog.lessonId, body: { title } },
+                      {
+                        onSuccess: () => {
+                          setLessonDialog({
+                            open: false,
+                            moduleId: 0,
+                            lessonId: null,
+                            title: "",
+                          });
+                          invalidateCourseLists();
+                        },
+                      }
+                    );
+                    return;
+                  }
+                  createLessonMutation.mutate(
+                    {
+                      course_id: cid,
+                      course_module_id: lessonDialog.moduleId,
+                      title,
+                    },
+                    {
+                      onSuccess: () => {
+                        setLessonDialog({
+                          open: false,
+                          moduleId: 0,
+                          lessonId: null,
+                          title: "",
+                        });
+                        invalidateCourseLists();
+                      },
+                    }
+                  );
+                }}
+              >
+                {createLessonMutation.isPending || updateLessonMutation.isPending ? (
+                  <Spinner className="h-4 w-4" />
+                ) : (
+                  "Save"
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
