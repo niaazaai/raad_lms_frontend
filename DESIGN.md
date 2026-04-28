@@ -128,6 +128,15 @@ Canonical dashboard layout:
 - Content blocks: cards with border + radius + neutral background
 - Data density: 4px/8px rhythm with spacing scales (`gap-4`, `space-y-4`, `space-y-6`)
 
+### Multi-step wizard (course create/edit)
+
+When a flow must fill the main content area without growing the document height:
+
+- Keep the flex chain from `MainLayout` → outlet → page root with `min-h-0` / `flex-1` so grid/flex children can shrink.
+- Wizard shell: `h-full max-h-full overflow-hidden` on the page root for step views that use inset scrolling.
+- Scroll **only** inside designated regions (e.g. category list panels): parent column uses `flex flex-col min-h-0`, list uses `flex-1 min-h-0 overflow-y-auto`.
+- Avoid `Boolean(stringId)` for step completion; coerce IDs with `Number()` / `valueAsNumber` on hidden fields so `"0"` is not treated as completed.
+
 Table/list pages must use the shared DataTable pattern:
 - Server-side search, sort, pagination, and filters
 - Horizontal table scroll only (avoid whole-page horizontal scroll)

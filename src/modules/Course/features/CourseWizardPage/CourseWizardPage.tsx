@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
 import type { Resolver } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -12,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { API_V1_BASE } from "@/services/apiClient";
 import {
   getCourseEntityDetailFromResponse,
+  getCourseListFromResponse,
   useCourseEntityDetail,
   useCourseEntityList,
   useCreateCourseEntity,
@@ -58,7 +58,6 @@ type StepConfig = {
   id: string;
   title: string;
   hint: string;
-  icon: ReactNode;
 };
 
 const steps: StepConfig[] = [
@@ -66,37 +65,31 @@ const steps: StepConfig[] = [
     id: "category",
     title: "Select category",
     hint: "Main & sub category",
-    icon: <Folder className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
   {
     id: "details",
     title: "Course details",
     hint: "Title, media, pricing",
-    icon: <PageEdit className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
   {
     id: "modules",
     title: "Course modules",
     hint: "Faasl module",
-    icon: <BookStack className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
   {
     id: "lessons",
     title: "Lessons",
     hint: "Videos & assignments",
-    icon: <Play className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
   {
     id: "resources",
     title: "Downloadable resources",
     hint: "Files for learners",
-    icon: <Attachment className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
   {
     id: "quiz",
     title: "Quiz files",
     hint: "Assessment files",
-    icon: <Page className="h-4 w-4 shrink-0 stroke-[1.5]" />,
   },
 ];
 
@@ -248,6 +241,26 @@ function VerticalCourseStepper({
   stepComplete,
   onStepChange,
 }: VerticalStepperProps) {
+  const stepIcon = (step: StepConfig, index: number) => {
+    const ic = "h-[18px] w-[18px] shrink-0 text-current";
+    switch (step.id) {
+      case "category":
+        return <Folder className={ic} strokeWidth={1.5} aria-hidden />;
+      case "details":
+        return <PageEdit className={ic} strokeWidth={1.5} aria-hidden />;
+      case "modules":
+        return <BookStack className={ic} strokeWidth={1.5} aria-hidden />;
+      case "lessons":
+        return <Play className={ic} strokeWidth={1.5} aria-hidden />;
+      case "resources":
+        return <Attachment className={ic} strokeWidth={1.5} aria-hidden />;
+      case "quiz":
+        return <Page className={ic} strokeWidth={1.5} aria-hidden />;
+      default:
+        return <span className="text-xs font-semibold tabular-nums">{index + 1}</span>;
+    }
+  };
+
   return (
     <nav
       className="rounded-lg border border-border bg-card p-4 shadow-sm"
@@ -260,6 +273,8 @@ function VerticalCourseStepper({
         {stepsConfig.map((step, index) => {
           const done = stepComplete[index];
           const active = currentStep === index;
+          /** Checkmark for completed steps only when not the current step — avoids "pre-filled" look */
+          const showDoneMark = done && !active;
           const isLast = index === stepsConfig.length - 1;
 
           return (
@@ -270,17 +285,22 @@ function VerticalCourseStepper({
                   onClick={() => onStepChange(index)}
                   className={cn(
                     "flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                    done && "border-primary bg-primary text-white shadow-sm shadow-primary/25",
+                    showDoneMark &&
+                      "border-primary bg-primary text-white shadow-sm shadow-primary/25",
                     active &&
-                      !done &&
+                      !showDoneMark &&
                       "border-primary bg-primary/10 text-primary ring-2 ring-primary/20",
                     !active &&
-                      !done &&
+                      !showDoneMark &&
                       "border-border bg-muted/40 text-muted-foreground hover:border-primary/40 hover:bg-muted"
                   )}
                   aria-current={active ? "step" : undefined}
                 >
-                  {done ? <Check className="h-[18px] w-[18px] stroke-[2.5]" /> : step.icon}
+                  {showDoneMark ? (
+                    <Check className="h-[18px] w-[18px] text-white" strokeWidth={2.5} aria-hidden />
+                  ) : (
+                    stepIcon(step, index)
+                  )}
                 </button>
                 {!isLast ? (
                   <div
@@ -345,6 +365,10 @@ const CourseWizardPage = () => {
   const form = useForm<FormData>({
     resolver: zodResolver(schema) as Resolver<FormData>,
     defaultValues: {
+      course_main_category_id: 0,
+      course_sub_category_id: 0,
+      course_module_id: 0,
+      title: "",
       lessons: [],
       downloadable_resources: [],
       quiz_files: [],
@@ -364,14 +388,15 @@ const CourseWizardPage = () => {
   const selectedMain = watch("course_main_category_id");
   const selectedSub = watch("course_sub_category_id");
 
-  const mainRows = useMemo(() => {
-    const raw = (mainCategoriesQuery.data as { data?: CategoryRow[] } | undefined)?.data ?? [];
-    return raw;
-  }, [mainCategoriesQuery.data]);
+  const mainRows = useMemo(
+    () => getCourseListFromResponse(mainCategoriesQuery.data),
+    [mainCategoriesQuery.data]
+  );
 
-  const allSub = useMemo(() => {
-    return (subCategoriesQuery.data as { data?: CategoryRow[] } | undefined)?.data ?? [];
-  }, [subCategoriesQuery.data]);
+  const allSub = useMemo(
+    () => getCourseListFromResponse(subCategoriesQuery.data),
+    [subCategoriesQuery.data]
+  );
 
   const filteredSubCategories = useMemo(() => {
     if (!selectedMain || Number(selectedMain) <= 0) return [];
@@ -430,10 +455,17 @@ const CourseWizardPage = () => {
   }, [detailQuery.data, setValue]);
 
   const watchedValues = watch();
+
+  const numId = (v: unknown) => {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  };
+
   const stepState = [
-    Boolean(watchedValues.course_main_category_id) && Boolean(watchedValues.course_sub_category_id),
-    Boolean(watchedValues.title),
-    Boolean(watchedValues.course_module_id),
+    numId(watchedValues.course_main_category_id) > 0 &&
+      numId(watchedValues.course_sub_category_id) > 0,
+    String(watchedValues.title ?? "").trim().length > 0,
+    numId(watchedValues.course_module_id) > 0,
     watchedValues.lessons.length > 0,
     watchedValues.downloadable_resources.length > 0,
     watchedValues.quiz_files.length > 0,
@@ -502,9 +534,9 @@ const CourseWizardPage = () => {
   return (
     <div
       className={cn(
-        "min-h-0 flex flex-col",
+        "flex min-h-0 w-full flex-col",
         currentStep === 0
-          ? "max-h-full flex-1 gap-4 overflow-hidden p-4 md:p-6"
+          ? "h-full max-h-full flex-1 gap-4 overflow-hidden"
           : "space-y-6 p-4 md:p-6"
       )}
     >
@@ -520,12 +552,13 @@ const CourseWizardPage = () => {
       <form
         onSubmit={handleSubmit(onSubmit)}
         className={cn(
-          "min-h-0 w-full",
-          "grid gap-8 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]",
-          currentStep === 0 ? "flex-1 overflow-hidden lg:items-stretch" : "lg:items-start"
+          "grid min-h-0 w-full gap-8 lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)]",
+          currentStep === 0
+            ? "min-h-0 flex-1 overflow-hidden lg:items-stretch [&>*]:min-h-0"
+            : "lg:items-start"
         )}
       >
-        <div className={cn("lg:sticky lg:top-4", currentStep === 0 && "self-start")}>
+        <div className={cn("min-h-0 lg:sticky lg:top-4", currentStep === 0 ? "self-start" : "")}>
           <VerticalCourseStepper
             stepsConfig={steps}
             currentStep={currentStep}
@@ -540,6 +573,8 @@ const CourseWizardPage = () => {
             currentStep === 0 && "flex min-h-0 flex-1 flex-col overflow-hidden"
           )}
         >
+          <input type="hidden" {...register("course_main_category_id", { valueAsNumber: true })} />
+          <input type="hidden" {...register("course_sub_category_id", { valueAsNumber: true })} />
           {currentStep === 0 && (
             <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden">
               <div className="flex shrink-0 items-start gap-3 border-b border-border pb-4">
@@ -609,7 +644,7 @@ const CourseWizardPage = () => {
                               disabled={viewMode}
                               onClick={() => selectMainCategory(id)}
                               className={cn(
-                                "flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition-colors duration-150",
+                                "relative z-10 flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition-colors duration-150",
                                 "disabled:pointer-events-none disabled:opacity-50",
                                 isActive
                                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
@@ -701,7 +736,7 @@ const CourseWizardPage = () => {
                               disabled={viewMode}
                               onClick={() => selectSubCategory(id)}
                               className={cn(
-                                "flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition-colors duration-150",
+                                "relative z-10 flex w-full cursor-pointer items-center gap-2 rounded-lg border p-2 text-left transition-colors duration-150",
                                 "disabled:pointer-events-none disabled:opacity-50",
                                 isActive
                                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"
@@ -733,9 +768,6 @@ const CourseWizardPage = () => {
                   </div>
                 </div>
               </div>
-
-              <input type="hidden" {...register("course_main_category_id")} />
-              <input type="hidden" {...register("course_sub_category_id")} />
             </div>
           )}
 
