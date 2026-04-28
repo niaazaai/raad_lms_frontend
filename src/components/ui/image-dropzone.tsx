@@ -1,7 +1,9 @@
 import { useState, useRef, useCallback, useEffect, useLayoutEffect } from "react";
 import { Label } from "@/components/ui";
-import { MediaImage, Page, Xmark } from "iconoir-react";
+import { MediaImage, Page, Play, Xmark } from "iconoir-react";
 import { cn } from "@/lib/utils";
+
+export type ImageDropzoneMediaPreview = "image" | "video" | "file";
 
 export interface ImageDropzoneProps {
   accept: string;
@@ -12,6 +14,8 @@ export interface ImageDropzoneProps {
   value?: File | null;
   onSelect: (file: File | null) => void;
   previewMode?: "square" | "wide";
+  /** Use `video` for lesson uploads — shows &lt;video&gt; preview instead of &lt;img&gt;. */
+  mediaPreview?: ImageDropzoneMediaPreview;
   initialPreviewUrl?: string | null;
   initialPreviewName?: string | null;
 }
@@ -25,6 +29,7 @@ const ImageDropzone = ({
   value,
   onSelect,
   previewMode = "square",
+  mediaPreview = "image",
   initialPreviewUrl,
   initialPreviewName,
 }: ImageDropzoneProps) => {
@@ -42,10 +47,14 @@ const ImageDropzone = ({
       setPreviewUrl(null);
       return undefined;
     }
+    if (mediaPreview === "file" && !value.type.startsWith("video/")) {
+      setPreviewUrl(null);
+      return undefined;
+    }
     const url = URL.createObjectURL(value);
     setPreviewUrl(url);
     return () => URL.revokeObjectURL(url);
-  }, [value]);
+  }, [value, mediaPreview]);
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
@@ -104,6 +113,23 @@ const ImageDropzone = ({
                   {value.name || initialPreviewName || "File"}
                 </span>
               </div>
+            ) : value && previewUrl && mediaPreview === "video" ? (
+              <video
+                src={previewUrl}
+                controls
+                muted
+                className={cn(
+                  "max-h-36 rounded-lg border border-border bg-black object-contain",
+                  previewMode === "wide" ? "w-full max-w-[280px]" : "w-full max-w-[240px]"
+                )}
+              />
+            ) : value && previewUrl && mediaPreview === "file" ? (
+              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
+                <Page className="h-10 w-10 text-muted-foreground" />
+                <span className="text-xs font-medium text-foreground truncate max-w-[200px]">
+                  {value.name || initialPreviewName || "File"}
+                </span>
+              </div>
             ) : value && previewUrl ? (
               <img
                 src={previewUrl}
@@ -112,6 +138,17 @@ const ImageDropzone = ({
                   "object-cover border border-border rounded-lg",
                   previewMode === "square" ? "h-24 w-24" : "h-20 w-full max-w-[240px]"
                 )}
+              />
+            ) : initialPreviewUrl && !remotePreviewFailed && mediaPreview === "video" ? (
+              <video
+                src={initialPreviewUrl}
+                controls
+                muted
+                className={cn(
+                  "max-h-36 rounded-lg border border-border bg-black object-contain",
+                  previewMode === "wide" ? "w-full max-w-[280px]" : "w-full max-w-[240px]"
+                )}
+                onError={() => setRemotePreviewFailed(true)}
               />
             ) : initialPreviewUrl && !remotePreviewFailed ? (
               <img
@@ -137,7 +174,11 @@ const ImageDropzone = ({
           </div>
         ) : (
           <>
-            <MediaImage className="h-10 w-10 text-muted-foreground" />
+            {mediaPreview === "video" ? (
+              <Play className="h-10 w-10 text-muted-foreground" />
+            ) : (
+              <MediaImage className="h-10 w-10 text-muted-foreground" />
+            )}
             <p className="mt-2 text-sm font-medium text-foreground">Click or drag to upload</p>
             <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>
           </>

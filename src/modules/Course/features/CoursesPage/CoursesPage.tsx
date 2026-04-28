@@ -89,7 +89,7 @@ const CoursesPage = () => {
           permission: "course.courses.read",
           onClick: (row) => {
             const id = Number(row.id);
-            if (!Number.isNaN(id)) navigate(`/course/courses/${id}/edit?mode=view`);
+            if (!Number.isNaN(id)) navigate(`/course/courses/${id}/view`);
           },
         },
         {
@@ -180,7 +180,7 @@ const CoursesPage = () => {
                       {hasPermission("course.courses.read") && (
                         <DropdownMenuItem
                           onClick={() =>
-                            !Number.isNaN(id) && navigate(`/course/courses/${id}/edit?mode=view`)
+                            !Number.isNaN(id) && navigate(`/course/courses/${id}/view`)
                           }
                         >
                           <Eye className="mr-2 h-4 w-4" /> View

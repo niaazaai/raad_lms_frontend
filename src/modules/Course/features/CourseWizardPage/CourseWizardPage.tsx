@@ -445,6 +445,13 @@ const CourseWizardPage = () => {
   const [searchParams] = useSearchParams();
   const viewMode = searchParams.get("mode") === "view";
   const editId = courseId ? Number(courseId) : null;
+
+  useEffect(() => {
+    if (viewMode && editId != null && !Number.isNaN(editId)) {
+      navigate(`/course/courses/${editId}/view`, { replace: true });
+    }
+  }, [viewMode, editId, navigate]);
+
   const [currentStep, setCurrentStep] = useState(0);
   /** Persisted course id before route includes `:courseId` (create flow). */
   const [draftCourseId, setDraftCourseId] = useState<number | null>(null);
@@ -535,12 +542,22 @@ const CourseWizardPage = () => {
     existingFileUrl?: string | null;
   }>({ title: "", file: null });
 
-  const [lessonDialog, setLessonDialog] = useState<{
-    open: boolean;
+  const [lessonDrawerOpen, setLessonDrawerOpen] = useState(false);
+  const [lessonDraft, setLessonDraft] = useState<{
     moduleId: number;
     lessonId: number | null;
     title: string;
-  }>({ open: false, moduleId: 0, lessonId: null, title: "" });
+    description: string;
+    videoFile: File | null;
+    existingVideoUrl: string | null;
+  }>({
+    moduleId: 0,
+    lessonId: null,
+    title: "",
+    description: "",
+    videoFile: null,
+    existingVideoUrl: null,
+  });
 
   const [moduleRenameDialog, setModuleRenameDialog] = useState<{
     open: boolean;
@@ -635,15 +652,6 @@ const CourseWizardPage = () => {
     () => getCourseListFromResponse(lessonsQuery.data),
     [lessonsQuery.data]
   );
-
-  const stepState = [
-    numId(watchedValues.course_main_category_id) > 0 &&
-      numId(watchedValues.course_sub_category_id) > 0,
-    String(watchedValues.title ?? "").trim().length > 0,
-    modulesRowsStep.length >= 1 && lessonsRowsStep.length >= 1,
-    true,
-    true,
-  ];
 
   const mainSelected = Boolean(selectedMain && Number(selectedMain) > 0);
   const subSelected = Boolean(selectedSub && Number(selectedSub) > 0);
@@ -794,6 +802,16 @@ const CourseWizardPage = () => {
     [quizListQuery.data]
   );
 
+  /** Do not mark optional steps complete until there is real content (avoids “pre-checked” stepper). */
+  const stepState = [
+    numId(watchedValues.course_main_category_id) > 0 &&
+      numId(watchedValues.course_sub_category_id) > 0,
+    String(watchedValues.title ?? "").trim().length > 0,
+    modulesRowsStep.length >= 1 && lessonsRowsStep.length >= 1,
+    resourcesRows.length >= 1,
+    quizRowsList.length >= 1,
+  ];
+
   return (
     <div
       className={cn(
@@ -805,7 +823,7 @@ const CourseWizardPage = () => {
     >
       <div className={cn(currentStep === 0 && "shrink-0")}>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          {editId ? (viewMode ? "View course" : "Edit course") : "Create course"}
+          {editId ? "Edit course" : "Create course"}
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Complete each step — you can move back anytime before saving.
@@ -1279,8 +1297,8 @@ const CourseWizardPage = () => {
                       setModuleModalOpen(true);
                     }}
                   >
-                    <Plus className=" h-4 w-4" strokeWidth={2} />
-                       
+                    <Plus className="h-4 w-4" strokeWidth={2} />
+                    New module
                   </Button>
                 ) : null}
               </div>
@@ -1368,14 +1386,20 @@ const CourseWizardPage = () => {
                                           variant="ghost"
                                           size="sm"
                                           className="h-8 px-2"
-                                          onClick={() =>
-                                            setLessonDialog({
-                                              open: true,
+                                          onClick={() => {
+                                            setLessonDraft({
                                               moduleId: mid,
                                               lessonId: lid,
                                               title: String(lesson.title ?? ""),
-                                            })
-                                          }
+                                              description: String(lesson.description ?? ""),
+                                              videoFile: null,
+                                              existingVideoUrl:
+                                                typeof lesson.primary_video_url === "string"
+                                                  ? lesson.primary_video_url
+                                                  : null,
+                                            });
+                                            setLessonDrawerOpen(true);
+                                          }}
                                         >
                                           <EditPencil className="h-4 w-4" strokeWidth={1.5} />
                                         </Button>
@@ -1404,14 +1428,17 @@ const CourseWizardPage = () => {
                                 variant="outline"
                                 size="sm"
                                 className="mt-1"
-                                onClick={() =>
-                                  setLessonDialog({
-                                    open: true,
+                                onClick={() => {
+                                  setLessonDraft({
                                     moduleId: mid,
                                     lessonId: null,
                                     title: "",
-                                  })
-                                }
+                                    description: "",
+                                    videoFile: null,
+                                    existingVideoUrl: null,
+                                  });
+                                  setLessonDrawerOpen(true);
+                                }}
                               >
                                 <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
                                 Add lesson
@@ -2013,114 +2040,165 @@ const CourseWizardPage = () => {
         </div>
       ) : null}
 
-      {lessonDialog.open ? (
-        <div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 px-4"
-          role="presentation"
-          onClick={() =>
-            setLessonDialog({
-              open: false,
-              moduleId: 0,
-              lessonId: null,
-              title: "",
-            })
-          }
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="lesson-dialog-heading"
-            className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="lesson-dialog-heading" className="text-lg font-semibold text-foreground">
-              {lessonDialog.lessonId != null ? "Edit lesson" : "New lesson"}
-            </h3>
-            <div className="mt-4 space-y-1.5">
-              <Label htmlFor="lesson-title-input">Title</Label>
-              <Input
-                id="lesson-title-input"
-                value={lessonDialog.title}
-                onChange={(e) =>
-                  setLessonDialog((d) => ({ ...d, title: e.target.value }))
+      <Drawer
+        open={lessonDrawerOpen}
+        onClose={() => {
+          setLessonDrawerOpen(false);
+          setLessonDraft({
+            moduleId: 0,
+            lessonId: null,
+            title: "",
+            description: "",
+            videoFile: null,
+            existingVideoUrl: null,
+          });
+        }}
+      >
+        <DrawerOverlay />
+        <DrawerContent>
+          <DrawerHeader>
+            <DrawerTitle>
+              {lessonDraft.lessonId != null ? "Edit lesson" : "New lesson"}
+            </DrawerTitle>
+          </DrawerHeader>
+          <DrawerBody>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <FieldLabel htmlFor="lesson-drawer-title" required>
+                  Title
+                </FieldLabel>
+                <Input
+                  id="lesson-drawer-title"
+                  value={lessonDraft.title}
+                  onChange={(e) =>
+                    setLessonDraft((d) => ({ ...d, title: e.target.value }))
+                  }
+                  placeholder="Lesson title"
+                  disabled={viewMode}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <FieldLabel htmlFor="lesson-drawer-description">Description</FieldLabel>
+                <textarea
+                  id="lesson-drawer-description"
+                  className={textAreaClassName}
+                  rows={3}
+                  value={lessonDraft.description}
+                  onChange={(e) =>
+                    setLessonDraft((d) => ({ ...d, description: e.target.value }))
+                  }
+                  placeholder="Short summary for learners"
+                  disabled={viewMode}
+                />
+              </div>
+              <ImageDropzone
+                accept="video/mp4,video/webm,video/quicktime,video/*"
+                mediaPreview="video"
+                label="Video"
+                hint="MP4, WebM, MOV — stored on the server; large files may take a moment"
+                value={lessonDraft.videoFile}
+                onSelect={(file) => setLessonDraft((d) => ({ ...d, videoFile: file }))}
+                previewMode="wide"
+                initialPreviewUrl={
+                  lessonDraft.videoFile ? null : lessonDraft.existingVideoUrl
                 }
-                placeholder="Lesson title"
+                initialPreviewName={
+                  lessonDraft.videoFile
+                    ? null
+                    : lessonDraft.existingVideoUrl
+                      ? "Current video"
+                      : null
+                }
               />
             </div>
-            <div className="mt-6 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  setLessonDialog({
-                    open: false,
-                    moduleId: 0,
-                    lessonId: null,
-                    title: "",
-                  })
-                }
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                disabled={
-                  !lessonDialog.title.trim() ||
-                  createLessonMutation.isPending ||
-                  updateLessonMutation.isPending ||
-                  effectiveCourseId == null
-                }
-                onClick={() => {
-                  const cid = effectiveCourseId;
-                  if (!cid || !lessonDialog.title.trim()) return;
-                  const title = lessonDialog.title.trim();
-                  if (lessonDialog.lessonId != null) {
-                    updateLessonMutation.mutate(
-                      { id: lessonDialog.lessonId, body: { title } },
-                      {
-                        onSuccess: () => {
-                          setLessonDialog({
-                            open: false,
-                            moduleId: 0,
-                            lessonId: null,
-                            title: "",
-                          });
-                          invalidateCourseLists();
-                        },
-                      }
-                    );
-                    return;
-                  }
-                  createLessonMutation.mutate(
-                    {
-                      course_id: cid,
-                      course_module_id: lessonDialog.moduleId,
-                      title,
-                    },
+          </DrawerBody>
+          <DrawerFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setLessonDrawerOpen(false);
+                setLessonDraft({
+                  moduleId: 0,
+                  lessonId: null,
+                  title: "",
+                  description: "",
+                  videoFile: null,
+                  existingVideoUrl: null,
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={
+                !lessonDraft.title.trim() ||
+                createLessonMutation.isPending ||
+                updateLessonMutation.isPending ||
+                effectiveCourseId == null ||
+                viewMode
+              }
+              onClick={() => {
+                const cid = effectiveCourseId;
+                if (!cid || !lessonDraft.title.trim()) return;
+                const title = lessonDraft.title.trim();
+                const description = lessonDraft.description.trim();
+                if (lessonDraft.lessonId != null) {
+                  const body: Record<string, unknown> = { title };
+                  if (description) body.description = description;
+                  if (lessonDraft.videoFile) body.video_file = lessonDraft.videoFile;
+                  updateLessonMutation.mutate(
+                    { id: lessonDraft.lessonId, body },
                     {
                       onSuccess: () => {
-                        setLessonDialog({
-                          open: false,
+                        setLessonDrawerOpen(false);
+                        setLessonDraft({
                           moduleId: 0,
                           lessonId: null,
                           title: "",
+                          description: "",
+                          videoFile: null,
+                          existingVideoUrl: null,
                         });
                         invalidateCourseLists();
                       },
                     }
                   );
-                }}
-              >
-                {createLessonMutation.isPending || updateLessonMutation.isPending ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  "Save"
-                )}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+                  return;
+                }
+                const body: Record<string, unknown> = {
+                  course_id: cid,
+                  course_module_id: lessonDraft.moduleId,
+                  title,
+                };
+                if (description) body.description = description;
+                if (lessonDraft.videoFile) body.video_file = lessonDraft.videoFile;
+                createLessonMutation.mutate(body, {
+                  onSuccess: () => {
+                    setLessonDrawerOpen(false);
+                    setLessonDraft({
+                      moduleId: 0,
+                      lessonId: null,
+                      title: "",
+                      description: "",
+                      videoFile: null,
+                      existingVideoUrl: null,
+                    });
+                    invalidateCourseLists();
+                  },
+                });
+              }}
+            >
+              {createLessonMutation.isPending || updateLessonMutation.isPending ? (
+                <Spinner className="h-4 w-4" />
+              ) : (
+                "Save lesson"
+              )}
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };
