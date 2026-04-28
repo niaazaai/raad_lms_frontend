@@ -1,10 +1,15 @@
 "use client";
 
+/* eslint-disable react-refresh/only-export-components -- provider, hooks, and preset maps are intentional API surface */
+
 import * as React from "react";
 import { WarningTriangle, Trash, InfoCircle, CheckCircle, Xmark } from "iconoir-react";
+import { type VariantProps } from "class-variance-authority";
 import { Spinner } from "./spinner";
 import { cn } from "@/lib/utils";
-import { Button } from "./button";
+import { Button, buttonVariants } from "./button";
+
+type ButtonVariant = NonNullable<VariantProps<typeof buttonVariants>["variant"]>;
 
 // ============================================
 // Types
@@ -126,7 +131,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
 
 const variantConfig: Record<
   ConfirmVariant,
-  { icon: React.ReactNode; iconBg: string; iconColor: string; buttonVariant: string }
+  { icon: React.ReactNode; iconBg: string; iconColor: string; buttonVariant: ButtonVariant }
 > = {
   danger: {
     icon: <Trash className="h-6 w-6" />,
@@ -171,10 +176,7 @@ function ConfirmDialogComponent({
   return (
     <>
       {/* Backdrop */}
-      <div
-        className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
-        onClick={onCancel}
-      />
+      <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" onClick={onCancel} />
 
       {/* Dialog */}
       <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-md -translate-x-1/2 -translate-y-1/2 animate-in fade-in-0 zoom-in-95">
@@ -214,11 +216,7 @@ function ConfirmDialogComponent({
                 {cancelText}
               </Button>
             )}
-            <Button
-              variant={config.buttonVariant as any}
-              onClick={onConfirm}
-              disabled={isLoading}
-            >
+            <Button variant={config.buttonVariant} onClick={onConfirm} disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Spinner className="h-4 w-4" />

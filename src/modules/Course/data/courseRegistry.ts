@@ -134,7 +134,15 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Define free vs paid access windows—duration, price, and plan copy that matches your ACCA offerings.",
     apiPath: "/subscription-plans",
     permission: "course.subscription_plans.read",
-    columns: ["id", "course_id", "plan_name", "price", "duration_in_days", "subscription_type", "status"],
+    columns: [
+      "id",
+      "course_id",
+      "plan_name",
+      "price",
+      "duration_in_days",
+      "subscription_type",
+      "status",
+    ],
     filterParams: ["course_id"],
   },
   "course-subscriptions": {
@@ -154,7 +162,14 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Learner entitlements with dates, payment proof, and approvals—your ledger for who can access what.",
     apiPath: "/student-subscriptions",
     permission: "course.student_subscriptions.read",
-    columns: ["id", "course_id", "user_id", "subscription_status", "payment_status", "purchase_date"],
+    columns: [
+      "id",
+      "course_id",
+      "user_id",
+      "subscription_status",
+      "payment_status",
+      "purchase_date",
+    ],
     filterParams: ["course_id"],
   },
   instructors: {

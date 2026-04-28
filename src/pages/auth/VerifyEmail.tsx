@@ -50,10 +50,7 @@ const VerifyEmailPage = () => {
           >
             Raad LMS
           </Link>
-          <Link
-            to="/login"
-            className="text-sm font-medium text-primary hover:text-primary-active"
-          >
+          <Link to="/login" className="text-sm font-medium text-primary hover:text-primary-active">
             Sign in
           </Link>
         </nav>
@@ -91,11 +88,7 @@ const VerifyEmailPage = () => {
                 disabled={isResending}
                 className="inline-flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-active disabled:opacity-50"
               >
-                {isResending ? (
-                  <Spinner className="h-4 w-4" />
-                ) : (
-                  "Resend verification email"
-                )}
+                {isResending ? <Spinner className="h-4 w-4" /> : "Resend verification email"}
               </button>
             </div>
           </div>

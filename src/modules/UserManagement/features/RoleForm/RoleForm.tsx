@@ -5,13 +5,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, FloppyDisk, Shield, Check } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useRole, useCreateRole, useUpdateRole, usePermissions } from "../../hooks";
-import { CreateRoleSchema } from "../../data/models";
+import { CreateRoleSchema, type Permission } from "../../data/models";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 interface RoleFormProps {
   mode?: "create" | "edit";
 }
+
+const EMPTY_PERMISSIONS: Permission[] = [];
 
 const RoleForm = ({ mode = "create" }: RoleFormProps) => {
   const navigate = useNavigate();
@@ -28,11 +30,12 @@ const RoleForm = ({ mode = "create" }: RoleFormProps) => {
 
   // Fetch existing role if editing
   const { data: existingData, isLoading: isLoadingRole } = useRole(roleId);
-  const role = (existingData as { data?: { name?: string; permissions?: { name: string }[] } })?.data;
+  const role = (existingData as { data?: { name?: string; permissions?: { name: string }[] } })
+    ?.data;
 
   // Fetch available permissions
   const { data: permissionsData } = usePermissions();
-  const permissions = permissionsData?.data || [];
+  const permissions = useMemo(() => permissionsData?.data ?? EMPTY_PERMISSIONS, [permissionsData]);
 
   // Group permissions by module
   const groupedPermissions = useMemo(() => {
@@ -113,11 +116,10 @@ const RoleForm = ({ mode = "create" }: RoleFormProps) => {
     }
   };
 
-  const allPermissionNames = useMemo(
-    () => permissions.map((p) => p.name),
-    [permissions]
-  );
-  const allSelected = allPermissionNames.length > 0 && allPermissionNames.every((p) => selectedPermissions.includes(p));
+  const allPermissionNames = useMemo(() => permissions.map((p) => p.name), [permissions]);
+  const allSelected =
+    allPermissionNames.length > 0 &&
+    allPermissionNames.every((p) => selectedPermissions.includes(p));
   const someSelected = allPermissionNames.some((p) => selectedPermissions.includes(p));
 
   const toggleSelectAll = () => {
@@ -209,9 +211,7 @@ const RoleForm = ({ mode = "create" }: RoleFormProps) => {
                 )}
               >
                 {allSelected && <Check className="h-3 w-3" />}
-                {someSelected && !allSelected && (
-                  <div className="h-2 w-2 rounded-sm bg-primary" />
-                )}
+                {someSelected && !allSelected && <div className="h-2 w-2 rounded-sm bg-primary" />}
               </div>
             </button>
           )}

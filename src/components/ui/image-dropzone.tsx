@@ -80,13 +80,18 @@ const ImageDropzone = ({
         tabIndex={0}
         onClick={() => inputRef.current?.click()}
         onKeyDown={(e) => e.key === "Enter" && inputRef.current?.click()}
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOver(true);
+        }}
         onDragLeave={() => setDragOver(false)}
         onDrop={handleDrop}
         className={cn(
           "flex flex-col items-center justify-center rounded-xl border-2 border-dashed px-4 py-6 text-center transition-colors cursor-pointer",
           previewMode === "wide" && "py-8",
-          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30",
+          dragOver
+            ? "border-primary bg-primary/5"
+            : "border-border hover:border-primary/50 hover:bg-muted/30",
           error && "border-danger"
         )}
       >
@@ -121,7 +126,10 @@ const ImageDropzone = ({
             ) : null}
             <button
               type="button"
-              onClick={(e) => { e.stopPropagation(); onSelect(null); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect(null);
+              }}
               className="absolute -right-2 -top-2 flex h-6 w-6 items-center justify-center rounded-full bg-danger text-white hover:bg-danger-active"
             >
               <Xmark className="h-3.5 w-3.5" />

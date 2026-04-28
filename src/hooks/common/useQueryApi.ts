@@ -55,7 +55,8 @@ export function useQueryApi<TData = ObjectAny>({
   const controllerRef = useRef<AbortController | null>(null);
 
   return useQuery({
-    queryKey,
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps -- controllerRef.current must not be part of the cache key
+    queryKey: [...queryKey, hasFiles, apiConfig],
     queryFn: async () => {
       // Cancel previous request if still pending
       controllerRef.current?.abort();
@@ -188,7 +189,7 @@ export function useSuspenseQueryApi<TData = ObjectAny>({
   ...apiConfig
 }: QueryApiConfig<TData>) {
   return useSuspenseQuery({
-    queryKey,
+    queryKey: [...queryKey, hasFiles, apiConfig],
     queryFn: async () => {
       const response = await callApi<TData>({
         ...apiConfig,

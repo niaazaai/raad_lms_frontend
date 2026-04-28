@@ -42,7 +42,10 @@ const SearchableSelect = ({
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement>(null);
 
-  const selectedLabel = useMemo(() => options.find((o) => o.value === value)?.label, [options, value]);
+  const selectedLabel = useMemo(
+    () => options.find((o) => o.value === value)?.label,
+    [options, value]
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

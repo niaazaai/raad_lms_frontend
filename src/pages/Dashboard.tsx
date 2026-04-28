@@ -15,7 +15,7 @@ const DashboardPage = () => {
       next.delete("from");
       setSearchParams(next, { replace: true });
     }
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   const { data: statsRes, isLoading: loadingStats } = useDashboardStats();
   const stats = (statsRes?.data ?? statsRes ?? {}) as Record<string, number>;
@@ -32,18 +32,13 @@ const DashboardPage = () => {
       <div
         className="relative overflow-hidden rounded-2xl p-8"
         style={{
-          background:
-            "linear-gradient(135deg, #004d87 0%, #0069B4 50%, #0080d6 100%)",
+          background: "linear-gradient(135deg, #004d87 0%, #0069B4 50%, #0080d6 100%)",
           color: "white",
         }}
       >
         <div className="relative z-10">
-          <h1 className="text-3xl font-bold text-white">
-            Welcome back, {user?.name || "User"}!
-          </h1>
-          <p className="mt-2 text-white/90">
-            {"Hope you're having a great day!"}
-          </p>
+          <h1 className="text-3xl font-bold text-white">Welcome back, {user?.name || "User"}!</h1>
+          <p className="mt-2 text-white/90">{"Hope you're having a great day!"}</p>
         </div>
         <div className="absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10" />
         <div className="absolute -bottom-12 -right-12 h-48 w-48 rounded-full bg-white/10" />

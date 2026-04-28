@@ -15,10 +15,7 @@ import {
   type CourseEntitySlug,
   COURSE_ENTITY_SLUGS,
 } from "../../data/courseRegistry";
-import {
-  COURSE_ENTITY_FORM_REGISTRY,
-  coursePermission,
-} from "../../data/courseEntityFormRegistry";
+import { COURSE_ENTITY_FORM_REGISTRY, coursePermission } from "../../data/courseEntityFormRegistry";
 import CourseEntityFormDrawer, {
   type CourseEntityDrawerMode,
 } from "../CourseEntityFormDrawer/CourseEntityFormDrawer";
@@ -164,7 +161,9 @@ const CourseEntityList = () => {
   const [drawerMode, setDrawerMode] = useState<CourseEntityDrawerMode>("create");
   const [drawerEntityId, setDrawerEntityId] = useState<number | null>(null);
   const [subCategoriesDrawerOpen, setSubCategoriesDrawerOpen] = useState(false);
-  const [subCategoriesMain, setSubCategoriesMain] = useState<{ id: number; title: string } | null>(null);
+  const [subCategoriesMain, setSubCategoriesMain] = useState<{ id: number; title: string } | null>(
+    null
+  );
 
   const resolvedSlug = isSlug(slug) && !HIDDEN_INDEPENDENT_SLUGS.includes(slug) ? slug : null;
   const cfg = resolvedSlug ? COURSE_ENTITY_REGISTRY[resolvedSlug] : null;
@@ -299,16 +298,16 @@ const CourseEntityList = () => {
     const columns =
       resolvedSlug === "main-categories" || resolvedSlug === "sub-categories"
         ? [
-          ...mappedColumns.slice(0, 1),
-          {
-            key: "thumbnail",
-            header: "Image",
-            sortable: false,
-            filterable: false,
-            render: (row: CourseRow) => <CategoryImageCell slug={resolvedSlug} row={row} />,
-          },
-          ...mappedColumns.slice(1),
-        ]
+            ...mappedColumns.slice(0, 1),
+            {
+              key: "thumbnail",
+              header: "Image",
+              sortable: false,
+              filterable: false,
+              render: (row: CourseRow) => <CategoryImageCell slug={resolvedSlug} row={row} />,
+            },
+            ...mappedColumns.slice(1),
+          ]
         : mappedColumns;
 
     return {
@@ -331,14 +330,14 @@ const CourseEntityList = () => {
         },
         ...(resolvedSlug === "main-categories"
           ? [
-            {
-              key: "sub-categories",
-              label: "Sub-categories",
-              icon: <AlbumList className="h-4 w-4" />,
-              permission: COURSE_ENTITY_REGISTRY["sub-categories"].permission,
-              onClick: (row: CourseRow) => openSubCategoriesDrawer(row),
-            },
-          ]
+              {
+                key: "sub-categories",
+                label: "Sub-categories",
+                icon: <AlbumList className="h-4 w-4" />,
+                permission: COURSE_ENTITY_REGISTRY["sub-categories"].permission,
+                onClick: (row: CourseRow) => openSubCategoriesDrawer(row),
+              },
+            ]
           : []),
         {
           key: "edit",
@@ -355,45 +354,46 @@ const CourseEntityList = () => {
         },
         ...(statusToggle
           ? [
-            {
-              key: "toggle",
-              label: (row: CourseRow) => {
-                const cur = String(row[statusToggle.field] ?? "");
-                return cur === statusToggle.activeValue ? "Deactivate" : "Activate";
+              {
+                key: "toggle",
+                label: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? "Deactivate" : "Activate";
+                },
+                icon: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? (
+                    <Prohibition className="h-4 w-4" />
+                  ) : (
+                    <CheckCircle className="h-4 w-4" />
+                  );
+                },
+                variant: (row: CourseRow) => {
+                  const cur = String(row[statusToggle.field] ?? "");
+                  return cur === statusToggle.activeValue ? "danger" : "default";
+                },
+                permission: updatePerm,
+                onClick: (row: CourseRow) => {
+                  const id = row.id;
+                  const idNum = typeof id === "number" ? id : Number(id);
+                  const canAct = typeof id === "number" || !Number.isNaN(idNum);
+                  if (!canAct || patching) return;
+                  const numericId = typeof id === "number" ? id : idNum;
+                  const cur = String(row[statusToggle.field] ?? "");
+                  const nextVal =
+                    cur === statusToggle.activeValue
+                      ? statusToggle.inactiveValue
+                      : statusToggle.activeValue;
+                  patchEntity(
+                    { id: numericId, body: { [statusToggle.field]: nextVal } },
+                    {
+                      onError: (e: unknown) =>
+                        toast.error(e instanceof Error ? e.message : "Update failed"),
+                    }
+                  );
+                },
               },
-              icon: (row: CourseRow) => {
-                const cur = String(row[statusToggle.field] ?? "");
-                return cur === statusToggle.activeValue ? (
-                  <Prohibition className="h-4 w-4" />
-                ) : (
-                  <CheckCircle className="h-4 w-4" />
-                );
-              },
-              variant: (row: CourseRow) => {
-                const cur = String(row[statusToggle.field] ?? "");
-                return cur === statusToggle.activeValue ? "danger" : "default";
-              },
-              permission: updatePerm,
-              onClick: (row: CourseRow) => {
-                const id = row.id;
-                const idNum = typeof id === "number" ? id : Number(id);
-                const canAct = typeof id === "number" || !Number.isNaN(idNum);
-                if (!canAct || patching) return;
-                const numericId = typeof id === "number" ? id : idNum;
-                const cur = String(row[statusToggle.field] ?? "");
-                const nextVal =
-                  cur === statusToggle.activeValue
-                    ? statusToggle.inactiveValue
-                    : statusToggle.activeValue;
-                patchEntity(
-                  { id: numericId, body: { [statusToggle.field]: nextVal } },
-                  {
-                    onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Update failed"),
-                  }
-                );
-              },
-            },
-          ]
+            ]
           : []),
         {
           key: "delete",
@@ -456,12 +456,7 @@ const CourseEntityList = () => {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <PageBreadcrumb
-            items={[
-              { label: "Course", to: "/course" },
-              { label: cfg.title },
-            ]}
-          />
+          <PageBreadcrumb items={[{ label: "Course", to: "/course" }, { label: cfg.title }]} />
           <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
         </div>
         <Can permission={createPerm}>

@@ -175,7 +175,9 @@ const LoginPage = () => {
                     {showPassword ? <EyeClosed className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-sm text-danger">{errors.password.message}</p>}
+                {errors.password && (
+                  <p className="text-sm text-danger">{errors.password.message}</p>
+                )}
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-3">

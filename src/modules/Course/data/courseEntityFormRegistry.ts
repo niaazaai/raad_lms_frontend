@@ -1,6 +1,13 @@
 import type { CourseEntitySlug } from "./courseRegistry";
 
-export type CourseFormFieldType = "text" | "textarea" | "number" | "select" | "date" | "checkbox" | "json";
+export type CourseFormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "select"
+  | "date"
+  | "checkbox"
+  | "json";
 
 export interface CourseEntityFormField {
   name: string;
@@ -140,9 +147,19 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "is_new", label: "New", type: "checkbox" },
       { name: "is_best_seller", label: "Best seller", type: "checkbox" },
       { name: "is_free", label: "Free", type: "checkbox" },
-      { name: "course_module_id", label: "Course module (faasl) ID", type: "number", required: true },
+      {
+        name: "course_module_id",
+        label: "Course module (faasl) ID",
+        type: "number",
+        required: true,
+      },
       { name: "course_sub_category_id", label: "Sub category ID", type: "number", required: true },
-      { name: "course_main_category_id", label: "Main category ID", type: "number", required: true },
+      {
+        name: "course_main_category_id",
+        label: "Main category ID",
+        type: "number",
+        required: true,
+      },
       { name: "instructor_id", label: "Instructor user ID", type: "number" },
       { name: "estimated_duration", label: "Estimated duration (min)", type: "number" },
       { name: "students_enrolled", label: "Students enrolled", type: "number" },
@@ -158,7 +175,12 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "title", label: "Title", type: "text", required: true },
       { name: "description", label: "Description", type: "textarea" },
       { name: "content_type", label: "Content type", type: "select", options: CONTENT_TYPE },
-      { name: "video_sources", label: "Video sources (JSON array)", type: "json", placeholder: "[]" },
+      {
+        name: "video_sources",
+        label: "Video sources (JSON array)",
+        type: "json",
+        placeholder: "[]",
+      },
       { name: "default_resolution", label: "Default resolution", type: "text" },
       { name: "video_duration", label: "Video duration (sec)", type: "number" },
       { name: "video_size", label: "Video size (bytes)", type: "number" },
@@ -226,7 +248,12 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "certificate_file_url", label: "Certificate file URL", type: "text", required: true },
       { name: "issue_date", label: "Issue date", type: "date", required: true },
       { name: "issued_by", label: "Issued by (user ID)", type: "number" },
-      { name: "certificate_public_id", label: "Certificate public ID", type: "text", required: true },
+      {
+        name: "certificate_public_id",
+        label: "Certificate public ID",
+        type: "text",
+        required: true,
+      },
       { name: "qr_code_url", label: "QR code URL", type: "text", required: true },
       { name: "status", label: "Status", type: "select", options: ACTIVE_REVOKED },
       { name: "signature_hash", label: "Signature hash", type: "text", required: true },
@@ -240,7 +267,12 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "plan_description", label: "Plan description", type: "textarea" },
       { name: "price", label: "Price", type: "number", required: true },
       { name: "duration_in_days", label: "Duration (days)", type: "number", required: true },
-      { name: "subscription_type", label: "Subscription type", type: "select", options: SUB_FREE_PAID },
+      {
+        name: "subscription_type",
+        label: "Subscription type",
+        type: "select",
+        options: SUB_FREE_PAID,
+      },
       { name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE },
     ],
     statusToggle: { field: "status", activeValue: "active", inactiveValue: "inactive" },
@@ -256,7 +288,11 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
         options: ACTIVE_INACTIVE,
       },
     ],
-    statusToggle: { field: "subscription_status", activeValue: "active", inactiveValue: "inactive" },
+    statusToggle: {
+      field: "subscription_status",
+      activeValue: "active",
+      inactiveValue: "inactive",
+    },
   },
   "student-subscriptions": {
     fields: [
@@ -264,7 +300,12 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "plan_id", label: "Plan ID", type: "number", required: true },
       { name: "user_id", label: "User ID", type: "number", required: true },
       { name: "course_id", label: "Course ID", type: "number", required: true },
-      { name: "subscription_start_date", label: "Subscription start", type: "date", required: true },
+      {
+        name: "subscription_start_date",
+        label: "Subscription start",
+        type: "date",
+        required: true,
+      },
       { name: "subscription_end_date", label: "Subscription end", type: "date" },
       {
         name: "subscription_status",
@@ -281,7 +322,11 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "closed_at", label: "Closed at", type: "date" },
       { name: "notification_sent", label: "Notification sent", type: "checkbox" },
     ],
-    statusToggle: { field: "subscription_status", activeValue: "active", inactiveValue: "inactive" },
+    statusToggle: {
+      field: "subscription_status",
+      activeValue: "active",
+      inactiveValue: "inactive",
+    },
   },
   instructors: {
     fields: [
@@ -327,7 +372,9 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-export function getCreateDefaultsForEntity(slug: CourseEntitySlug): Record<string, string | boolean> {
+export function getCreateDefaultsForEntity(
+  slug: CourseEntitySlug
+): Record<string, string | boolean> {
   const def = COURSE_ENTITY_FORM_REGISTRY[slug];
   const out: Record<string, string | boolean> = {};
   const today = todayISO();
@@ -432,7 +479,12 @@ export function getSerializeFieldsForSlug(slug: CourseEntitySlug): CourseEntityF
   const def = COURSE_ENTITY_FORM_REGISTRY[slug];
   const extra: CourseEntityFormField[] = [];
   if (slug === "sub-categories") {
-    extra.push({ name: "main_category_id", label: "Main category", type: "number", required: true });
+    extra.push({
+      name: "main_category_id",
+      label: "Main category",
+      type: "number",
+      required: true,
+    });
     extra.push({ name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE });
   }
   return [...def.fields, ...extra];

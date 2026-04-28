@@ -1,4 +1,8 @@
-import { useCourseEntityList, getCourseListFromResponse, type CourseRow } from "../../hooks/useCourseEntity";
+import {
+  useCourseEntityList,
+  getCourseListFromResponse,
+  type CourseRow,
+} from "../../hooks/useCourseEntity";
 import {
   Drawer,
   DrawerBody,
@@ -55,13 +59,17 @@ const MainCategorySubCategoriesDrawer = ({
               <Spinner className="h-8 w-8 text-primary" />
             </div>
           ) : rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No sub-categories for this main category yet.</p>
+            <p className="text-sm text-muted-foreground">
+              No sub-categories for this main category yet.
+            </p>
           ) : (
             <ul className="divide-y divide-border rounded-lg border border-border bg-card">
               {rows.map((row: CourseRow) => {
                 const id = row.id;
                 const title =
-                  typeof row.title === "string" && row.title.trim().length > 0 ? row.title.trim() : "Untitled";
+                  typeof row.title === "string" && row.title.trim().length > 0
+                    ? row.title.trim()
+                    : "Untitled";
                 return (
                   <li key={String(id)} className="px-4 py-3 text-sm font-medium text-foreground">
                     {title}

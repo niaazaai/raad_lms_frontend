@@ -1,12 +1,23 @@
 import { useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { Plus, ViewGrid, List, Eye, EditPencil } from "iconoir-react";
-import { Button, DataTable, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui";
+import {
+  Button,
+  DataTable,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui";
 import { useDataTableParams } from "@/hooks";
 import { Can, useAuth } from "@/features/auth";
-import type { DataTableConfig } from "@/types/datatable";
+import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 import { COURSE_ENTITY_REGISTRY } from "../../data/courseRegistry";
-import { getCourseListFromResponse, type CourseRow, useCourseEntityList } from "../../hooks/useCourseEntity";
+import {
+  getCourseListFromResponse,
+  type CourseRow,
+  useCourseEntityList,
+} from "../../hooks/useCourseEntity";
 
 const CoursesPage = () => {
   const navigate = useNavigate();
@@ -29,18 +40,42 @@ const CoursesPage = () => {
 
   const { data, isFetching } = useCourseEntityList("courses", apiParams);
   const rows = getCourseListFromResponse(data);
-  const pagination = (data as { meta?: { pagination?: unknown } } | undefined)?.meta?.pagination as
-    | Record<string, unknown>
-    | null;
+  const pagination = (data as { meta?: { pagination?: DataTablePaginationMeta } } | undefined)?.meta
+    ?.pagination;
 
   const tableConfig: DataTableConfig<CourseRow> = useMemo(
     () => ({
       columns: [
-        { key: "title", header: "Title", sortable: true, render: (row) => String(row.title ?? "—") },
-        { key: "language", header: "Language", sortable: true, render: (row) => String(row.language ?? "—") },
-        { key: "level", header: "Level", sortable: true, render: (row) => String(row.level ?? "—") },
-        { key: "price", header: "Price", sortable: true, render: (row) => String(row.price ?? "—") },
-        { key: "status", header: "Status", sortable: true, render: (row) => String(row.status ?? "—") },
+        {
+          key: "title",
+          header: "Title",
+          sortable: true,
+          render: (row) => String(row.title ?? "—"),
+        },
+        {
+          key: "language",
+          header: "Language",
+          sortable: true,
+          render: (row) => String(row.language ?? "—"),
+        },
+        {
+          key: "level",
+          header: "Level",
+          sortable: true,
+          render: (row) => String(row.level ?? "—"),
+        },
+        {
+          key: "price",
+          header: "Price",
+          sortable: true,
+          render: (row) => String(row.price ?? "—"),
+        },
+        {
+          key: "status",
+          header: "Status",
+          sortable: true,
+          render: (row) => String(row.status ?? "—"),
+        },
       ],
       rowId: (row) => (typeof row.id === "number" ? row.id : String(row.id ?? "")),
       searchable: true,
@@ -77,7 +112,9 @@ const CoursesPage = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Courses</h1>
-          <p className="text-sm text-muted-foreground">{COURSE_ENTITY_REGISTRY.courses.pageDescription}</p>
+          <p className="text-sm text-muted-foreground">
+            {COURSE_ENTITY_REGISTRY.courses.pageDescription}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <div className="inline-flex rounded-md border border-border p-1">
@@ -119,7 +156,10 @@ const CoursesPage = () => {
           {rows.map((row) => {
             const id = Number(row.id);
             return (
-              <div key={String(row.id)} className="rounded-lg border border-border bg-card p-4 space-y-2">
+              <div
+                key={String(row.id)}
+                className="rounded-lg border border-border bg-card p-4 space-y-2"
+              >
                 <h3 className="font-semibold">{String(row.title ?? "Untitled Course")}</h3>
                 <p className="text-xs text-muted-foreground line-clamp-2">
                   {String(row.short_description ?? row.long_description ?? "No description")}
@@ -132,16 +172,26 @@ const CoursesPage = () => {
                   <span className="text-sm font-medium">{String(row.price ?? "—")}</span>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm">Actions</Button>
+                      <Button variant="outline" size="sm">
+                        Actions
+                      </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       {hasPermission("course.courses.read") && (
-                        <DropdownMenuItem onClick={() => !Number.isNaN(id) && navigate(`/course/courses/${id}/edit?mode=view`)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            !Number.isNaN(id) && navigate(`/course/courses/${id}/edit?mode=view`)
+                          }
+                        >
                           <Eye className="mr-2 h-4 w-4" /> View
                         </DropdownMenuItem>
                       )}
                       {hasPermission("course.courses.update") && (
-                        <DropdownMenuItem onClick={() => !Number.isNaN(id) && navigate(`/course/courses/${id}/edit`)}>
+                        <DropdownMenuItem
+                          onClick={() =>
+                            !Number.isNaN(id) && navigate(`/course/courses/${id}/edit`)
+                          }
+                        >
                           <EditPencil className="mr-2 h-4 w-4" /> Edit
                         </DropdownMenuItem>
                       )}

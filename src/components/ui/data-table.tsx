@@ -62,7 +62,10 @@ function ColumnHeader<T>({
   const currentFilter = params.filters[column.key];
   const hasFilter = currentFilter !== undefined && currentFilter !== "";
   const canFilter =
-    filtersEnabled && column.filterable !== false && column.filterOptions && column.filterOptions.length > 0;
+    filtersEnabled &&
+    column.filterable !== false &&
+    column.filterOptions &&
+    column.filterOptions.length > 0;
 
   const SortIcon = isSorted
     ? params.sort_dir === "asc"
@@ -94,10 +97,7 @@ function ColumnHeader<T>({
             <DropdownMenuTrigger asChild>
               <button
                 type="button"
-                className={cn(
-                  "rounded p-0.5 hover:bg-muted",
-                  hasFilter && "text-primary"
-                )}
+                className={cn("rounded p-0.5 hover:bg-muted", hasFilter && "text-primary")}
                 aria-label={`Filter ${column.header}`}
               >
                 <Filter className="h-3.5 w-3.5" />
@@ -107,7 +107,9 @@ function ColumnHeader<T>({
               <DropdownMenuLabel>Filter by {column.header}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuRadioGroup
-                value={currentFilter === undefined || currentFilter === "" ? "" : String(currentFilter)}
+                value={
+                  currentFilter === undefined || currentFilter === "" ? "" : String(currentFilter)
+                }
                 onValueChange={(v) => {
                   if (v === "") {
                     onFilter(column.key, undefined);
@@ -306,9 +308,7 @@ export function DataTable<T>({
                       {col.render(row)}
                     </td>
                   ))}
-                  {hasActions && (
-                    <ActionsCell row={row} actions={visibleActions} rowId={rowId} />
-                  )}
+                  {hasActions && <ActionsCell row={row} actions={visibleActions} rowId={rowId} />}
                 </tr>
               ))
             )}

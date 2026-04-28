@@ -104,7 +104,9 @@ function renderFieldControl(
     );
   }
   if (f.type === "date") {
-    return <input id={id} type="date" className={inputClass} disabled={readOnly} {...register(f.name)} />;
+    return (
+      <input id={id} type="date" className={inputClass} disabled={readOnly} {...register(f.name)} />
+    );
   }
   if (f.type === "select") {
     return (
@@ -175,7 +177,9 @@ const CourseEntityFormDrawer = ({
   const def = COURSE_ENTITY_FORM_REGISTRY[slug];
   const readOnly = mode === "view";
   const needsMeta = slug === "sub-categories";
-  const { data: metaRes, isLoading: metaLoading } = useCourseFormMeta(needsMeta ? "sub-categories" : null);
+  const { data: metaRes, isLoading: metaLoading } = useCourseFormMeta(
+    needsMeta ? "sub-categories" : null
+  );
   const meta = metaRes?.data;
   const mainCategoryOptions = useMemo(() => {
     const rows = meta?.main_categories ?? [];
@@ -243,10 +247,16 @@ const CourseEntityFormDrawer = ({
   };
 
   const heading =
-    mode === "create" ? `Create ${entityTitle}` : mode === "edit" ? `Edit ${entityTitle}` : `View ${entityTitle}`;
+    mode === "create"
+      ? `Create ${entityTitle}`
+      : mode === "edit"
+        ? `Edit ${entityTitle}`
+        : `View ${entityTitle}`;
 
   const thumbnailSrc =
-    THUMB_SLUGS.includes(slug) && entityId != null ? courseEntityThumbnailUrl(slug, entityId) : null;
+    THUMB_SLUGS.includes(slug) && entityId != null
+      ? courseEntityThumbnailUrl(slug, entityId)
+      : null;
 
   if (mode !== "create" && entityId != null && loadingDetail && !detail) {
     return (
@@ -293,12 +303,18 @@ const CourseEntityFormDrawer = ({
           <p className="text-lg font-semibold text-foreground">{title}</p>
         </div>
         <div className="space-y-1">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Description</p>
-          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">{description}</p>
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+            Description
+          </p>
+          <p className="text-sm leading-relaxed text-foreground whitespace-pre-wrap">
+            {description}
+          </p>
         </div>
         {thumbnailSrc ? (
           <div className="space-y-2">
-            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Image</p>
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+              Image
+            </p>
             <div className="overflow-hidden rounded-xl border border-border bg-muted/20">
               <CategoryDrawerViewImage key={entityId ?? 0} src={thumbnailSrc} title={title} />
             </div>
@@ -323,14 +339,18 @@ const CourseEntityFormDrawer = ({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <DrawerBody className="space-y-4">
-          {readOnly && (slug === "main-categories" || slug === "sub-categories") ? renderCategoryReadOnly() : null}
+          {readOnly && (slug === "main-categories" || slug === "sub-categories")
+            ? renderCategoryReadOnly()
+            : null}
           {readOnly && slug !== "main-categories" && slug !== "sub-categories" ? (
             <div className="space-y-4">{renderStandardFields(def.fields)}</div>
           ) : null}
 
           {slug === "main-categories" && (
             <>
-              {!readOnly ? renderStandardFields(def.fields.filter((f) => f.name !== "status")) : null}
+              {!readOnly
+                ? renderStandardFields(def.fields.filter((f) => f.name !== "status"))
+                : null}
               {showThumb ? (
                 <ImageDropzone
                   accept="image/jpeg,image/png,image/webp,image/gif"
@@ -342,7 +362,9 @@ const CourseEntityFormDrawer = ({
                   initialPreviewUrl={thumbnailFile ? null : thumbnailSrc}
                 />
               ) : null}
-              {!readOnly ? renderStandardFields(def.fields.filter((f) => f.name === "status")) : null}
+              {!readOnly
+                ? renderStandardFields(def.fields.filter((f) => f.name === "status"))
+                : null}
             </>
           )}
 
@@ -393,7 +415,10 @@ const CourseEntityFormDrawer = ({
             </>
           )}
 
-          {slug !== "main-categories" && slug !== "sub-categories" && !readOnly && renderStandardFields(def.fields)}
+          {slug !== "main-categories" &&
+            slug !== "sub-categories" &&
+            !readOnly &&
+            renderStandardFields(def.fields)}
         </DrawerBody>
 
         {!readOnly && (

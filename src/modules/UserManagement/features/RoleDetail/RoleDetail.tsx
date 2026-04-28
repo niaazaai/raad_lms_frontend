@@ -74,9 +74,7 @@ const RoleDetail = () => {
               <Group className="h-5 w-5" />
               <span className="text-sm font-medium">Users</span>
             </div>
-            <p className="mt-2 text-2xl font-semibold text-foreground">
-              {role.users_count ?? 0}
-            </p>
+            <p className="mt-2 text-2xl font-semibold text-foreground">{role.users_count ?? 0}</p>
           </div>
           <div className="rounded-lg border border-border bg-muted/30 p-4">
             <div className="flex items-center gap-2 text-muted-foreground">
@@ -114,10 +112,7 @@ const RoleDetail = () => {
               {role.users.map((u) => (
                 <li key={u.id} className="flex items-center justify-between text-sm">
                   <span className="font-medium text-foreground">{u.name}</span>
-                  <Link
-                    to={`/users?edit=${u.id}`}
-                    className="text-primary hover:underline"
-                  >
+                  <Link to={`/users?edit=${u.id}`} className="text-primary hover:underline">
                     {u.email}
                   </Link>
                 </li>

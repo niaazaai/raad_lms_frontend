@@ -5,34 +5,18 @@ import { useUsers, useUpdateUserMutation, useDeleteUserMutation } from "../../ho
 import { UserManagement, UserStatus, UserStatusLabels, UserStatusColors } from "../../data/models";
 import { UserFormDrawer } from "../UserForm/UserFormDrawer";
 import { UserRoleDrawer } from "../UserForm/UserRoleDrawer";
-import {
-  Button,
-  DataTable,
-  useConfirmDialog,
-  confirmPresets,
-} from "@/components/ui";
+import { Button, DataTable, useConfirmDialog, confirmPresets } from "@/components/ui";
 import { Can } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
-import type {
-  DataTableConfig,
-  DataTablePaginationMeta,
-} from "@/types/datatable";
-import {
-  Drawer,
-  DrawerOverlay,
-  DrawerContent,
-} from "@/components/ui";
+import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
+import { Drawer, DrawerOverlay, DrawerContent } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
 function getListFromResponse(response: unknown): UserManagement[] {
   if (!response || typeof response !== "object") return [];
   const data = (response as { data?: UserManagement[] | { data?: UserManagement[] } }).data;
   if (Array.isArray(data)) return data;
-  if (
-    data &&
-    typeof data === "object" &&
-    Array.isArray((data as { data?: UserManagement[] }).data)
-  )
+  if (data && typeof data === "object" && Array.isArray((data as { data?: UserManagement[] }).data))
     return (data as { data: UserManagement[] }).data;
   return [];
 }
@@ -257,8 +241,7 @@ const UserList = () => {
         variant: "danger" as const,
         onClick: async (user) => {
           const raw = String(user.status ?? "active");
-          const isInactive =
-            raw === "inactive" || raw === "suspended" || raw === "pending";
+          const isInactive = raw === "inactive" || raw === "suspended" || raw === "pending";
           const preset = isInactive
             ? confirmPresets.activate("User")
             : confirmPresets.suspend("User");
@@ -289,7 +272,7 @@ const UserList = () => {
   // For status toggle we need a different approach - use a custom action component
   // Let me simplify: create a UserActionsCell component that gets the user and has the mutation
   // Or: add useUpdateUser in a wrapper. Actually the simplest is to have a hook that takes (userId, data) - useMutationApi with a dynamic URL. We can create useUpdateUserMutation that accepts id in the variables: { id: number, ...data }. Let me add that.
-  
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -324,10 +307,7 @@ const UserList = () => {
       <Drawer open={formDrawerOpen} onClose={closeFormDrawer}>
         <DrawerOverlay />
         <DrawerContent>
-          <UserFormDrawer
-            user={editingUser}
-            onSuccess={closeFormDrawer}
-          />
+          <UserFormDrawer user={editingUser} onSuccess={closeFormDrawer} />
         </DrawerContent>
       </Drawer>
 

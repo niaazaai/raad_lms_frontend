@@ -25,7 +25,14 @@ const createTouchTexture = () => {
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   };
-  const drawPoint = (p: { x: number; y: number; age: number; force: number; vx: number; vy: number }) => {
+  const drawPoint = (p: {
+    x: number;
+    y: number;
+    age: number;
+    force: number;
+    vx: number;
+    vy: number;
+  }) => {
     const pos = { x: p.x * size, y: (1 - p.y) * size };
     let intensity = 1;
     const easeOutSine = (t: number) => Math.sin((t * Math.PI) / 2);
@@ -359,7 +366,9 @@ const PixelBlast = ({
   const visibilityRef = useRef({ visible: true });
   const speedRef = useRef(speed);
   const threeRef = useRef<ThreeState | null>(null);
-  const prevConfigRef = useRef<{ antialias: boolean; liquid: boolean; noiseAmount: number } | null>(null);
+  const prevConfigRef = useRef<{ antialias: boolean; liquid: boolean; noiseAmount: number } | null>(
+    null
+  );
 
   useEffect(() => {
     const container = containerRef.current;
@@ -389,7 +398,8 @@ const PixelBlast = ({
         t.composer?.dispose();
         t.renderer.dispose();
         t.renderer.forceContextLoss();
-        if (t.renderer.domElement.parentElement === container) container.removeChild(t.renderer.domElement);
+        if (t.renderer.domElement.parentElement === container)
+          container.removeChild(t.renderer.domElement);
         threeRef.current = null;
       }
 
@@ -501,7 +511,8 @@ const PixelBlast = ({
         );
         const noisePass = new EffectPass(camera, noiseEffect);
         noisePass.renderToScreen = true;
-        if (composer.passes.length > 0) composer.passes.forEach((p: { renderToScreen: boolean }) => (p.renderToScreen = false));
+        if (composer.passes.length > 0)
+          composer.passes.forEach((p: { renderToScreen: boolean }) => (p.renderToScreen = false));
         composer.addPass(noisePass);
       }
 
@@ -616,7 +627,8 @@ const PixelBlast = ({
       t.composer?.dispose();
       t.renderer.dispose();
       t.renderer.forceContextLoss();
-      if (t.renderer.domElement.parentElement === container) container.removeChild(t.renderer.domElement);
+      if (t.renderer.domElement.parentElement === container)
+        container.removeChild(t.renderer.domElement);
       threeRef.current = null;
     };
   }, [

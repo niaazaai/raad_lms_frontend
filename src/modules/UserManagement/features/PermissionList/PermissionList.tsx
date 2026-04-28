@@ -5,21 +5,14 @@ import { usePermissions } from "../../hooks";
 import { Permission } from "../../data/models";
 import { DataTable } from "@/components/ui";
 import { useDataTableParams } from "@/hooks";
-import type {
-  DataTableConfig,
-  DataTablePaginationMeta,
-} from "@/types/datatable";
+import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 import { cn } from "@/lib/utils";
 
 function getListFromResponse(response: unknown): Permission[] {
   if (!response || typeof response !== "object") return [];
   const data = (response as { data?: Permission[] | { data?: Permission[] } }).data;
   if (Array.isArray(data)) return data;
-  if (
-    data &&
-    typeof data === "object" &&
-    Array.isArray((data as { data?: Permission[] }).data)
-  )
+  if (data && typeof data === "object" && Array.isArray((data as { data?: Permission[] }).data))
     return (data as { data: Permission[] }).data;
   return [];
 }
@@ -82,9 +75,7 @@ const PermissionList = () => {
         header: "Module",
         render: (perm) => {
           const [module] = perm.name.split(".");
-          return (
-            <span className="capitalize text-muted-foreground">{module || "general"}</span>
-          );
+          return <span className="capitalize text-muted-foreground">{module || "general"}</span>;
         },
       },
       {
@@ -133,10 +124,7 @@ const PermissionList = () => {
         <div className="flex rounded-lg border border-border p-1">
           <button
             onClick={() => setViewMode("card")}
-            className={cn(
-              "rounded-md p-2",
-              viewMode === "card" ? "bg-muted" : "hover:bg-muted/50"
-            )}
+            className={cn("rounded-md p-2", viewMode === "card" ? "bg-muted" : "hover:bg-muted/50")}
             title="Card view"
           >
             <ViewGrid className="h-4 w-4" />
@@ -234,11 +222,8 @@ const PermissionList = () => {
                 <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
                   <p className="text-sm text-muted-foreground">
                     {(pagination.current_page - 1) * pagination.per_page + 1} to{" "}
-                    {Math.min(
-                      pagination.current_page * pagination.per_page,
-                      pagination.total
-                    )}{" "}
-                    of {pagination.total}
+                    {Math.min(pagination.current_page * pagination.per_page, pagination.total)} of{" "}
+                    {pagination.total}
                   </p>
                   <div className="flex gap-2">
                     <button

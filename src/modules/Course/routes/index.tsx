@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { lazy } from "react";
 import { ProtectedRouteType } from "@/types/routes";
 
@@ -7,22 +8,22 @@ const CoursesPage = lazy(() => import("../features/CoursesPage/CoursesPage"));
 const CourseWizardPage = lazy(() => import("../features/CourseWizardPage/CourseWizardPage"));
 
 const courseAnyPermissions = [
-      "course.main_categories.read",
-      "course.sub_categories.read",
-      "course.faasl_modules.read",
-      "course.courses.read",
-      "course.lessons.read",
-      "course.assignments.read",
-      "course.resources.read",
-      "course.quiz_files.read",
-      "course.discounts.read",
-      "course.certificates.read",
-      "course.subscription_plans.read",
-      "course.subscriptions.read",
-      "course.student_subscriptions.read",
-      "course.instructors.read",
-      "course.lms_classes.read",
-      "course.class_students.read",
+  "course.main_categories.read",
+  "course.sub_categories.read",
+  "course.faasl_modules.read",
+  "course.courses.read",
+  "course.lessons.read",
+  "course.assignments.read",
+  "course.resources.read",
+  "course.quiz_files.read",
+  "course.discounts.read",
+  "course.certificates.read",
+  "course.subscription_plans.read",
+  "course.subscriptions.read",
+  "course.student_subscriptions.read",
+  "course.instructors.read",
+  "course.lms_classes.read",
+  "course.class_students.read",
 ];
 
 export const CourseModuleRoutes: ProtectedRouteType[] = [

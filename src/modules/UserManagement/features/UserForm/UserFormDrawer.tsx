@@ -16,29 +16,37 @@ import {
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 
-const CreateUserFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  type: z.enum(["admin", "student", "instructor"]).default("student"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  password_confirmation: z.string(),
-  avatar: z.any().optional(),
-}).refine((data) => data.password === data.password_confirmation, {
-  message: "Passwords don't match",
-  path: ["password_confirmation"],
-});
+const CreateUserFormSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    type: z.enum(["admin", "student", "instructor"]).default("student"),
+    password: z.string().min(8, "Password must be at least 8 characters"),
+    password_confirmation: z.string(),
+    avatar: z.any().optional(),
+  })
+  .refine((data) => data.password === data.password_confirmation, {
+    message: "Passwords don't match",
+    path: ["password_confirmation"],
+  });
 
-const UpdateUserFormSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  type: z.enum(["admin", "student", "instructor"]).optional(),
-  password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
-  password_confirmation: z.string().optional().or(z.literal("")),
-  avatar: z.any().optional(),
-}).refine((data) => !data.password || data.password === data.password_confirmation, {
-  message: "Passwords don't match",
-  path: ["password_confirmation"],
-});
+const UpdateUserFormSchema = z
+  .object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email address"),
+    type: z.enum(["admin", "student", "instructor"]).optional(),
+    password: z
+      .string()
+      .min(8, "Password must be at least 8 characters")
+      .optional()
+      .or(z.literal("")),
+    password_confirmation: z.string().optional().or(z.literal("")),
+    avatar: z.any().optional(),
+  })
+  .refine((data) => !data.password || data.password === data.password_confirmation, {
+    message: "Passwords don't match",
+    path: ["password_confirmation"],
+  });
 
 type CreateUserFormData = z.infer<typeof CreateUserFormSchema>;
 type UpdateUserFormData = z.infer<typeof UpdateUserFormSchema>;
@@ -156,7 +164,9 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
         <DrawerBody className="space-y-4">
           {/* Avatar */}
           <div>
-            <label htmlFor="avatar-upload" className="mb-1.5 block text-sm font-medium">Profile Picture</label>
+            <label htmlFor="avatar-upload" className="mb-1.5 block text-sm font-medium">
+              Profile Picture
+            </label>
             <div className="flex items-center gap-4">
               <label
                 htmlFor="avatar-upload"
@@ -165,11 +175,7 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
                 )}
               >
                 {avatarPreview ? (
-                  <img
-                    src={avatarPreview}
-                    alt="Avatar"
-                    className="h-full w-full object-cover"
-                  />
+                  <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                 ) : (
                   <Camera className="h-8 w-8 text-muted-foreground" />
                 )}
@@ -200,7 +206,9 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
               placeholder="Enter full name"
             />
             {errors.name && (
-              <p className="mt-1 text-xs text-danger">{(errors as Record<string, { message?: string }>).name?.message}</p>
+              <p className="mt-1 text-xs text-danger">
+                {(errors as Record<string, { message?: string }>).name?.message}
+              </p>
             )}
           </div>
 
@@ -218,7 +226,9 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
               placeholder="user@example.com"
             />
             {errors.email && (
-              <p className="mt-1 text-xs text-danger">{(errors as Record<string, { message?: string }>).email?.message}</p>
+              <p className="mt-1 text-xs text-danger">
+                {(errors as Record<string, { message?: string }>).email?.message}
+              </p>
             )}
           </div>
 
@@ -257,7 +267,9 @@ export const UserFormDrawer = ({ user, onSuccess }: UserFormDrawerProps) => {
               </button>
             </div>
             {errors.password && (
-              <p className="mt-1 text-xs text-danger">{(errors as Record<string, { message?: string }>).password?.message}</p>
+              <p className="mt-1 text-xs text-danger">
+                {(errors as Record<string, { message?: string }>).password?.message}
+              </p>
             )}
           </div>
 

@@ -19,8 +19,10 @@ const MainLayout = () => {
       >
         <Header />
 
-        <main className="flex-1 p-4 pt-20 lg:p-6 lg:pt-24">
-          <Outlet />
+        <main className="flex min-h-0 flex-1 flex-col p-4 pt-20 lg:p-6 lg:pt-24">
+          <div className="flex min-h-0 flex-1 flex-col">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>

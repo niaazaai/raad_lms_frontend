@@ -12,10 +12,7 @@ const VerifyEmailExpiredPage = () => {
           >
             Raad LMS
           </Link>
-          <Link
-            to="/login"
-            className="text-sm font-medium text-primary hover:text-primary-active"
-          >
+          <Link to="/login" className="text-sm font-medium text-primary hover:text-primary-active">
             Sign in
           </Link>
         </nav>

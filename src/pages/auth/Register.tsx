@@ -100,7 +100,9 @@ const RegisterPage = () => {
             </div>
 
             <div className="mb-6 space-y-1 text-center">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground">Create your account</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                Create your account
+              </h1>
               <p className="text-sm text-muted-foreground">
                 We&apos;ll send a verification link to confirm your email.
               </p>
@@ -141,7 +143,9 @@ const RegisterPage = () => {
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {submitError && (
-                <p className="rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">{submitError}</p>
+                <p className="rounded-lg bg-danger/10 px-4 py-2 text-sm text-danger">
+                  {submitError}
+                </p>
               )}
 
               <div className="space-y-2">
@@ -202,7 +206,9 @@ const RegisterPage = () => {
                     {showPassword ? <EyeClosed className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
-                {errors.password && <p className="text-sm text-danger">{errors.password.message}</p>}
+                {errors.password && (
+                  <p className="text-sm text-danger">{errors.password.message}</p>
+                )}
               </div>
 
               <div className="space-y-2">

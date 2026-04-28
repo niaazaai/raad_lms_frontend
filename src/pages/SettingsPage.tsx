@@ -174,9 +174,14 @@ const SettingsPage = () => {
               )}
             </div>
           ) : enableStep === "code" ? (
-            <form onSubmit={enableForm.handleSubmit(handleConfirmEnable)} className="mt-4 space-y-4 max-w-sm">
+            <form
+              onSubmit={enableForm.handleSubmit(handleConfirmEnable)}
+              className="mt-4 space-y-4 max-w-sm"
+            >
               <div>
-                <label className="block text-sm font-medium mb-1">Enter the 6-digit code from your email</label>
+                <label className="block text-sm font-medium mb-1">
+                  Enter the 6-digit code from your email
+                </label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -186,7 +191,9 @@ const SettingsPage = () => {
                   placeholder="000000"
                 />
                 {enableForm.formState.errors.code && (
-                  <p className="text-sm text-danger mt-1">{enableForm.formState.errors.code.message}</p>
+                  <p className="text-sm text-danger mt-1">
+                    {enableForm.formState.errors.code.message}
+                  </p>
                 )}
               </div>
               <div className="flex gap-2">
@@ -195,11 +202,7 @@ const SettingsPage = () => {
                   disabled={enableForm.formState.isSubmitting}
                   className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary-active"
                 >
-                  {enableForm.formState.isSubmitting ? (
-                    <Spinner className="h-4 w-4" />
-                  ) : (
-                    "Confirm"
-                  )}
+                  {enableForm.formState.isSubmitting ? <Spinner className="h-4 w-4" /> : "Confirm"}
                 </button>
                 <button
                   type="button"

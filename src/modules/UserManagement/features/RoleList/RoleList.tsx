@@ -15,29 +15,17 @@ import {
 } from "iconoir-react";
 import { useRoles, useDeleteRole, useDeleteRoleMutation } from "../../hooks";
 import { Role } from "../../data/models";
-import {
-  Button,
-  DataTable,
-  useConfirmDialog,
-  confirmPresets,
-} from "@/components/ui";
+import { Button, DataTable, useConfirmDialog, confirmPresets } from "@/components/ui";
 import { Can, CanAny } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
-import type {
-  DataTableConfig,
-  DataTablePaginationMeta,
-} from "@/types/datatable";
+import type { DataTableConfig, DataTablePaginationMeta } from "@/types/datatable";
 import { cn } from "@/lib/utils";
 
 function getListFromResponse(response: unknown): Role[] {
   if (!response || typeof response !== "object") return [];
   const data = (response as { data?: Role[] | { data?: Role[] } }).data;
   if (Array.isArray(data)) return data;
-  if (
-    data &&
-    typeof data === "object" &&
-    Array.isArray((data as { data?: Role[] }).data)
-  )
+  if (data && typeof data === "object" && Array.isArray((data as { data?: Role[] }).data))
     return (data as { data: Role[] }).data;
   return [];
 }
@@ -106,9 +94,7 @@ const RoleList = () => {
       {
         key: "users_count",
         header: "Users",
-        render: (role) => (
-          <span className="text-muted-foreground">{role.users_count ?? 0}</span>
-        ),
+        render: (role) => <span className="text-muted-foreground">{role.users_count ?? 0}</span>,
       },
       {
         key: "permissions_count",
@@ -241,11 +227,8 @@ const RoleList = () => {
             <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3">
               <p className="text-sm text-muted-foreground">
                 {(pagination.current_page - 1) * pagination.per_page + 1} to{" "}
-                {Math.min(
-                  pagination.current_page * pagination.per_page,
-                  pagination.total
-                )}{" "}
-                of {pagination.total}
+                {Math.min(pagination.current_page * pagination.per_page, pagination.total)} of{" "}
+                {pagination.total}
               </p>
               <div className="flex gap-2">
                 <Button

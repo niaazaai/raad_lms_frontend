@@ -8,9 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 const CourseHub = () => {
   const { hasPermission } = useAuth();
 
-  const visible = COURSE_ENTITY_SLUGS.filter((slug) =>
-    COURSE_SIDEBAR_ORDER.includes(slug) &&
-    hasPermission(COURSE_ENTITY_REGISTRY[slug].permission)
+  const visible = COURSE_ENTITY_SLUGS.filter(
+    (slug) =>
+      COURSE_SIDEBAR_ORDER.includes(slug) && hasPermission(COURSE_ENTITY_REGISTRY[slug].permission)
   );
 
   return (
@@ -20,8 +20,8 @@ const CourseHub = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Course module</h1>
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Run your ACCA catalogue end to end—categories, commercial terms, content delivery, and cohorts
-            in one place.
+            Run your ACCA catalogue end to end—categories, commercial terms, content delivery, and
+            cohorts in one place.
           </p>
         </div>
       </div>
@@ -40,7 +40,9 @@ const CourseHub = () => {
                     <NavArrowRight className="text-muted-foreground h-4 w-4" />
                   </CardHeader>
                   <CardContent>
-                    <p className="text-muted-foreground text-sm leading-snug">{cfg.pageDescription}</p>
+                    <p className="text-muted-foreground text-sm leading-snug">
+                      {cfg.pageDescription}
+                    </p>
                   </CardContent>
                 </Card>
               </Link>

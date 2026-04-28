@@ -28,22 +28,23 @@ const AppRoutes = () => {
   return (
     <Routes location={location}>
       {/* Protected routes: AuthWrapper + Layout wrap only this branch */}
-      <Route element={<AuthWrapper><Layout /></AuthWrapper>}>
+      <Route
+        element={
+          <AuthWrapper>
+            <Layout />
+          </AuthWrapper>
+        }
+      >
         {ProtectedRoutes.map((route, routeIndex) => {
           const routeKey = `protected-${routeIndex}-${route.path}`;
           const content = (
             <Suspense fallback={route.componentLoader || fallback}>
-              <ProtectedRoute
-                permission={route.permission}
-                anyPermission={route.anyPermission}
-              >
+              <ProtectedRoute permission={route.permission} anyPermission={route.anyPermission}>
                 <div className="page-transition">{route.component}</div>
               </ProtectedRoute>
             </Suspense>
           );
-          return (
-            <Route key={routeKey} path={route.path} element={content} />
-          );
+          return <Route key={routeKey} path={route.path} element={content} />;
         })}
       </Route>
 

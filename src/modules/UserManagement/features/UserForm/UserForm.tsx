@@ -6,6 +6,7 @@ import { ArrowLeft, FloppyDisk, Eye, EyeClosed } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useState } from "react";
 import { useUser, useCreateUser, useUpdateUser, useRoles } from "../../hooks";
+import type { z } from "zod";
 import { CreateUserSchema, UpdateUserSchema } from "../../data/models";
 import { Button } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -44,7 +45,7 @@ const UserForm = ({ mode = "create" }: UserFormProps) => {
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver((isEdit ? UpdateUserSchema : CreateUserSchema) as any),
+    resolver: zodResolver((isEdit ? UpdateUserSchema : CreateUserSchema) as z.ZodTypeAny),
     defaultValues: {
       name: "",
       email: "",

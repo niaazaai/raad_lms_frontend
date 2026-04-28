@@ -111,14 +111,21 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     try {
       await fetchCsrfCookie();
 
-      const response = await callApi<User | { requires_2fa: boolean; token: string; email: string }>({
+      const response = await callApi<
+        User | { requires_2fa: boolean; token: string; email: string }
+      >({
         url: API_ENDPOINTS.AUTH.LOGIN,
         method: RequestMethod.POST,
         data: { email, password },
         shouldPopError: true,
       });
 
-      const data = response.data as { data?: User; requires_2fa?: boolean; token?: string; email?: string };
+      const data = response.data as {
+        data?: User;
+        requires_2fa?: boolean;
+        token?: string;
+        email?: string;
+      };
 
       if (data?.requires_2fa && data?.token && data?.email) {
         set({
@@ -142,7 +149,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
         const isCsrfExpired = response.status === 419;
         const apiMessage =
           (response.data as { message?: string })?.message ||
-          ((response.data as { errors?: { email?: string[] } })?.errors?.email?.[0]) ||
+          (response.data as { errors?: { email?: string[] } })?.errors?.email?.[0] ||
           null;
         set({
           status: AuthStatus.UNAUTHENTICATED,

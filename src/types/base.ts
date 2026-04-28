@@ -109,11 +109,7 @@ export type BaseApiFilterType = {
 /**
  * Nested key accessor type utility
  */
-export type Join<K, P> = K extends string
-  ? P extends string
-    ? `${K}.${P}`
-    : never
-  : never;
+export type Join<K, P> = K extends string ? (P extends string ? `${K}.${P}` : never) : never;
 
 export type NestedKeys<T> = {
   [K in keyof T & (string | number)]: T[K] extends Record<string, unknown>

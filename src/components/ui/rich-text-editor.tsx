@@ -150,10 +150,7 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
 
     return (
       <div
-        className={cn(
-          "overflow-hidden rounded-lg border border-input bg-background",
-          className
-        )}
+        className={cn("overflow-hidden rounded-lg border border-input bg-background", className)}
       >
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-1 border-b border-input bg-muted/30 px-2 py-1.5">
@@ -229,11 +226,7 @@ const RichTextEditor = React.forwardRef<HTMLDivElement, RichTextEditorProps>(
 
           <span className="mx-1 h-5 w-px bg-border" />
 
-          <ToolbarButton
-            onClick={addLink}
-            active={editor.isActive("link")}
-            aria-label="Add link"
-          >
+          <ToolbarButton onClick={addLink} active={editor.isActive("link")} aria-label="Add link">
             <LinkIcon className="h-4 w-4 stroke-[1.5]" />
           </ToolbarButton>
           <ToolbarButton onClick={addImage} aria-label="Add image">
