@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { BookStack, NavArrowRight } from "iconoir-react";
 import { COURSE_ENTITY_REGISTRY, COURSE_ENTITY_SLUGS } from "../../data/courseRegistry";
+import { COURSE_SIDEBAR_ORDER } from "../../data/courseSidebarNav";
 import { PermissionDeniedCard, useAuth } from "@/features/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui";
 
@@ -8,6 +9,7 @@ const CourseHub = () => {
   const { hasPermission } = useAuth();
 
   const visible = COURSE_ENTITY_SLUGS.filter((slug) =>
+    COURSE_SIDEBAR_ORDER.includes(slug) &&
     hasPermission(COURSE_ENTITY_REGISTRY[slug].permission)
   );
 
@@ -31,7 +33,7 @@ const CourseHub = () => {
           {visible.map((slug) => {
             const cfg = COURSE_ENTITY_REGISTRY[slug];
             return (
-              <Link key={slug} to={`/course/entities/${slug}`}>
+              <Link key={slug} to={slug === "courses" ? "/course/courses" : `/course/${slug}`}>
                 <Card className="hover:border-primary/40 h-full transition-colors">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-base font-semibold">{cfg.title}</CardTitle>

@@ -55,10 +55,11 @@ function courseRowsToNavItems(rows: CourseSidebarRow[]): NavItem[] {
       };
     }
     const cfg = COURSE_ENTITY_REGISTRY[row.slug];
+    const path = row.slug === "courses" ? "/course/courses" : `/course/${row.slug}`;
     return {
       navKey: `course-entity-${row.slug}-${index}`,
       title: cfg.title,
-      path: `/course/entities/${row.slug}`,
+      path,
       icon: <CourseEntitySidebarIcon slug={row.slug} />,
       permission: cfg.permission,
     };

@@ -3,6 +3,8 @@ import { ProtectedRouteType } from "@/types/routes";
 
 const CourseHub = lazy(() => import("../features/CourseHub/CourseHub"));
 const CourseEntityList = lazy(() => import("../features/CourseEntityList/CourseEntityList"));
+const CoursesPage = lazy(() => import("../features/CoursesPage/CoursesPage"));
+const CourseWizardPage = lazy(() => import("../features/CourseWizardPage/CourseWizardPage"));
 
 const courseAnyPermissions = [
       "course.main_categories.read",
@@ -25,7 +27,25 @@ const courseAnyPermissions = [
 
 export const CourseModuleRoutes: ProtectedRouteType[] = [
   {
-    path: "/course/entities/:slug",
+    path: "/course/courses",
+    component: <CoursesPage />,
+    permission: "course.courses.read",
+    anyPermission: courseAnyPermissions,
+  },
+  {
+    path: "/course/courses/create",
+    component: <CourseWizardPage />,
+    permission: "course.courses.create",
+    anyPermission: courseAnyPermissions,
+  },
+  {
+    path: "/course/courses/:courseId/edit",
+    component: <CourseWizardPage />,
+    permission: "course.courses.update",
+    anyPermission: courseAnyPermissions,
+  },
+  {
+    path: "/course/:slug",
     component: <CourseEntityList />,
     permission: "course.main_categories.read",
     anyPermission: courseAnyPermissions,

@@ -12,12 +12,7 @@ export const COURSE_MODULE_ANY_PERMISSIONS: string[] = (
 export const COURSE_SIDEBAR_ORDER: CourseEntitySlug[] = [
   "main-categories",
   "sub-categories",
-  "course-faasls",
   "courses",
-  "lessons",
-  "assignments",
-  "downloadable-resources",
-  "quiz-files",
   "student-discounts",
   "subscription-plans",
   "course-subscriptions",
@@ -28,9 +23,7 @@ export const COURSE_SIDEBAR_ORDER: CourseEntitySlug[] = [
   "lms-class-students",
 ];
 
-export type CourseSidebarRow =
-  | { kind: "overview" }
-  | { kind: "entity"; slug: CourseEntitySlug };
+export type CourseSidebarRow = { kind: "overview" } | { kind: "entity"; slug: CourseEntitySlug };
 
 export function buildCourseSidebarRows(
   hasPermission: (permission: string) => boolean

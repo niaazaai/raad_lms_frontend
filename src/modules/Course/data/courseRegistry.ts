@@ -53,7 +53,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
     title: "Modules (faasl)",
     pageDescription:
       "Modules (faasl) sequence the ACCA journey—name each stage so courses and classes stay aligned.",
-    apiPath: "/course-faasls",
+    apiPath: "/faasls",
     permission: "course.faasl_modules.read",
     columns: ["id", "title", "created_at"],
   },
