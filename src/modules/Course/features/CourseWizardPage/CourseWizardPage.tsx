@@ -603,7 +603,7 @@ const CourseWizardPage = () => {
                   </h3>
                   <div className="relative mb-2 shrink-0">
                     <Search
-                      className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      className="  absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -615,7 +615,7 @@ const CourseWizardPage = () => {
                       aria-label="Search main categories"
                     />
                   </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain rounded-md border border-border/80 bg-muted/20 p-1.5">
+                  <div >
                     {mainLoading ? (
                       <div className="flex min-h-[120px] flex-1 items-center justify-center py-6">
                         <Spinner className="h-8 w-8 text-primary" />
@@ -687,7 +687,7 @@ const CourseWizardPage = () => {
                   </h3>
                   <div className="relative mb-2 shrink-0">
                     <Search
-                      className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+                      className="  absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
                       strokeWidth={1.5}
                     />
                     <Input
@@ -700,7 +700,7 @@ const CourseWizardPage = () => {
                       aria-label="Search sub categories"
                     />
                   </div>
-                  <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain rounded-md border border-border/80 bg-muted/20 p-1.5">
+                  <div >
                     {!mainSelected ? (
                       <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 px-4 py-8 text-center">
                         <Folder className="h-9 w-9 text-muted-foreground/45 stroke-[1]" />
