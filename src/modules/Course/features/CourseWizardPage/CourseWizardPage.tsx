@@ -1279,8 +1279,8 @@ const CourseWizardPage = () => {
                       setModuleModalOpen(true);
                     }}
                   >
-                    <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
-                    New Module
+                    <Plus className=" h-4 w-4" strokeWidth={2} />
+                       
                   </Button>
                 ) : null}
               </div>
@@ -1892,14 +1892,9 @@ const CourseWizardPage = () => {
             className="w-full max-w-md rounded-lg border border-border bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="new-module-heading" className="text-lg font-semibold text-foreground">
-              New module
-            </h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Modules belong to this course and contain your lessons.
-            </p>
+           
             <div className="mt-4 space-y-1.5">
-              <Label htmlFor="new-module-input">Title</Label>
+              <Label htmlFor="new-module-input">New module Title</Label>
               <Input
                 id="new-module-input"
                 value={newModuleTitle}
