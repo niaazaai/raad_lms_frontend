@@ -8,11 +8,8 @@ import { LoginSchema, LoginFormData, getDashboardPath } from "@/data/models/User
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
 import { cn } from "@/lib/utils";
+import PixelBlast from "@/components/ui/pixel-blast";
 import LoginWith2FA from "./LoginWith2FA";
-
-const SLOGAN = "Learn. Manage. Grow.";
-const HERO_BG =
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -92,18 +89,37 @@ const LoginPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left: Login card */}
-      <div className="flex w-full flex-col bg-background lg:w-1/2">
-         
+    <div className="relative min-h-screen overflow-hidden bg-white">
+      <div className="absolute inset-0 z-0">
+        <PixelBlast
+          variant="diamond"
+          pixelSize={3}
+          color="#0960f0"
+          patternScale={3}
+          patternDensity={2}
+          enableRipples
+          rippleSpeed={0.25}
+          rippleThickness={0.21}
+          rippleIntensityScale={1}
+          speed={0.5}
+          transparent
+          edgeFade={0.1}
+        />
+      </div>
 
-        <main className="flex flex-1 flex-col justify-center px-4 py-10 sm:px-6 lg:px-12">
-          <div className="mx-auto w-full max-w-md">
-            <div className="mb-8">
+      <main className="relative z-10 flex min-h-screen flex-col justify-center px-4 py-10 sm:px-6 lg:px-12">
+        <div className="mx-auto w-full max-w-md rounded-2xl border border-border/40 bg-white/95 p-6 shadow-xl md:p-8">
+          <div className="mb-8">
+            <div className="mb-6 flex flex-col items-center justify-center text-center">
+              <img
+                src="/logo.png"
+                alt="Raad LMS"
+                className="  w-64 object-contain"
+              />
+            </div>
+
+            <div className="mb-8 text-center">
               <h1 className="text-2xl font-bold text-foreground">Welcome back</h1>
-              <p className="mt-2 text-muted-foreground">
-                Sign in to access your dashboard and manage your account.
-              </p>
             </div>
 
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -241,53 +257,8 @@ const LoginPage = () => {
               </Link>
             </p>
           </div>
-        </main>
-      </div>
-
-      {/* Right: Branded panel */}
-      <div
-        className="hidden lg:flex lg:w-1/2 relative flex-col justify-between p-8 lg:p-12 overflow-hidden"
-        aria-hidden
-      >
-        {/* Background image */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${HERO_BG})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black/70" />
-
-        {/* Logo + slogan */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <img
-              src="/logo.png"
-              alt="Raad LMS"
-              className="h-12 w-12 object-contain drop-shadow-lg"
-            />
-            <div>
-              <span className="text-2xl font-bold text-white drop-shadow-md">
-                Raad <span className="text-primary">LMS</span>
-              </span>
-              <p className="text-sm text-white/90 mt-0.5">{SLOGAN}</p>
-            </div>
-          </div>
         </div>
-
-        {/* CTA at bottom */}
-        <div className="relative z-10 space-y-4">
-          <p className="text-sm text-white/90 max-w-xs">
-            Don&apos;t have an account yet? Create one and get started.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              to="/register"
-              className="inline-flex items-center gap-2 rounded-lg border-2 border-white/40 bg-white/10 px-4 py-2.5 text-sm font-medium text-white backdrop-blur-sm transition-all hover:bg-white/20 hover:border-white/60"
-            >
-              Create an account
-            </Link>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
