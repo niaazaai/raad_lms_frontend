@@ -6,6 +6,7 @@ interface ProtectedRouteProps {
   children: ReactNode;
   permission?: string;
   anyPermission?: string[];
+  anyRole?: string[];
   fallback?: ReactNode;
 }
 
@@ -17,10 +18,15 @@ interface ProtectedRouteProps {
  * - If anyPermission array is provided, checks if user has any of them
  * - Shows unauthorized fallback if permission check fails
  */
-const ProtectedRoute = ({ children, permission, anyPermission, fallback }: ProtectedRouteProps) => {
-  const { hasPermission, hasAnyPermission } = useAuth();
+const ProtectedRoute = ({ children, permission, anyPermission, anyRole, fallback }: ProtectedRouteProps) => {
+  const { hasPermission, hasAnyPermission, hasAnyRole } = useAuth();
 
-  // Check permissions
+  if (anyRole && anyRole.length > 0) {
+    if (!hasAnyRole(anyRole)) {
+      return fallback || <PermissionDeniedCard />;
+    }
+  }
+
   if (anyPermission && anyPermission.length > 0) {
     if (!hasAnyPermission(anyPermission)) {
       return fallback || <PermissionDeniedCard />;

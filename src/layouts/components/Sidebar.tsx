@@ -10,6 +10,7 @@ import {
   NavArrowDown,
   Xmark,
   Community,
+  PageSearch,
 } from "iconoir-react";
 import { useLayoutStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,8 @@ interface NavItem {
   icon: React.ReactNode;
   permission?: string;
   anyPermission?: string[];
+  /** Spatie role name(s); e.g. activity log visible only with `root`. */
+  anyRole?: string[];
   children?: NavItem[];
   skipChildPermissionFilter?: boolean;
   navKey?: string;
@@ -77,6 +80,12 @@ const baseNavItems: NavItem[] = [
     icon: <Community className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" />,
     children: [
       {
+        title: "Activity log",
+        path: "/activity-log",
+        icon: <PageSearch className="h-4 w-4 shrink-0 stroke-[1.5]" />,
+        anyRole: ["root"],
+      },
+      {
         title: "Users",
         path: "/users",
         icon: <User className="h-4 w-4 shrink-0 stroke-[1.5]" />,
@@ -105,7 +114,7 @@ const baseNavItems: NavItem[] = [
 
 const Sidebar = () => {
   const { sidebarCollapsed, mobileMenuOpen, setMobileMenuOpen } = useLayoutStore();
-  const { hasPermission, hasAnyPermission } = useAuth();
+  const { hasPermission, hasAnyPermission, hasAnyRole } = useAuth();
   const location = useLocation();
   const [expandedGroups, setExpandedGroups] = useState<string[]>(["User Management", "Courses"]);
 
@@ -163,6 +172,9 @@ const Sidebar = () => {
         if (item.anyPermission?.length) {
           if (!hasAnyPermission(item.anyPermission)) return null;
         } else if (item.permission && !hasPermission(item.permission)) {
+          return null;
+        }
+        if (item.anyRole?.length && !hasAnyRole(item.anyRole)) {
           return null;
         }
         return item;

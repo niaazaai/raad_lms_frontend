@@ -81,6 +81,23 @@ export const useAuth = () => {
   );
 
   /**
+   * Spatie role names from `/auth/me` (e.g. `admin`, `root`, `student`).
+   */
+  const hasAnyRole = useCallback(
+    (roleNames: string[]): boolean => {
+      if (import.meta.env.VITE_DISABLE_AUTH === "true") {
+        return true;
+      }
+      if (!roleNames || roleNames.length === 0) {
+        return true;
+      }
+      const roles = user?.roles ?? [];
+      return roleNames.some((r) => roles.includes(r));
+    },
+    [user?.roles]
+  );
+
+  /**
    * Derived states
    */
   const isAuthenticated = useMemo(
@@ -106,6 +123,7 @@ export const useAuth = () => {
     hasPermission,
     hasAnyPermission,
     hasAllPermissions,
+    hasAnyRole,
     login,
     verify2FA,
     setPending2FA,

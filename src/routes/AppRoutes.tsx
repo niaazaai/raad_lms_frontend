@@ -39,7 +39,11 @@ const AppRoutes = () => {
           const routeKey = `protected-${routeIndex}-${route.path}`;
           const content = (
             <Suspense fallback={route.componentLoader || fallback}>
-              <ProtectedRoute permission={route.permission} anyPermission={route.anyPermission}>
+              <ProtectedRoute
+                permission={route.permission}
+                anyPermission={route.anyPermission}
+                anyRole={route.anyRole}
+              >
                 <div className="page-transition">{route.component}</div>
               </ProtectedRoute>
             </Suspense>
