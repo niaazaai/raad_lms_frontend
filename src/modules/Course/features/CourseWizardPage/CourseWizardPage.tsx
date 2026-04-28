@@ -1,11 +1,37 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Resolver } from "react-hook-form";
-import { useFieldArray, useForm } from "react-hook-form";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Attachment, BookStack, Check, Folder, Page, PageEdit, Play, Search } from "iconoir-react";
-import { Button, Input, Label } from "@/components/ui";
+import { Button, ImageDropzone, Input, Label, RichTextEditor } from "@/components/ui";
+import {
+  COURSE_LANGUAGE_OPTIONS,
+  COURSE_LEVEL_OPTIONS,
+  CourseLanguage,
+  CourseLevel,
+  type CourseLanguageValue,
+  type CourseLevelValue,
+} from "@/data/enums/courseWizard";
+
+const COURSE_DETAIL_FLAG_FIELDS = [
+  "is_featured",
+  "is_popular",
+  "is_new",
+  "is_best_seller",
+  "is_free",
+] as const;
+
+type CourseDetailFlagField = (typeof COURSE_DETAIL_FLAG_FIELDS)[number];
+
+const COURSE_DETAIL_FLAG_LABELS: Record<CourseDetailFlagField, string> = {
+  is_featured: "Featured",
+  is_popular: "Popular",
+  is_new: "New",
+  is_best_seller: "Best seller",
+  is_free: "Free",
+};
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/lib/utils";
 import { API_V1_BASE } from "@/services/apiClient";
@@ -27,6 +53,9 @@ const fileEntrySchema = z.object({
   title: z.string().optional(),
 });
 
+const courseLanguageSchema = z.enum(["PASHTOO", "DARI", "ENGLISH"]);
+const courseLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
+
 const schema = z.object({
   course_main_category_id: z.coerce.number().min(1, "Main category is required"),
   course_sub_category_id: z.coerce.number().min(1, "Sub category is required"),
@@ -35,8 +64,8 @@ const schema = z.object({
   short_description: z.string().optional(),
   long_description: z.string().optional(),
   prerequisites: z.string().optional(),
-  language: z.string().optional(),
-  level: z.string().optional(),
+  language: courseLanguageSchema.default(CourseLanguage.DARI),
+  level: courseLevelSchema.default(CourseLevel.INTERMEDIATE),
   thumbnail: z.string().optional(),
   banner: z.string().optional(),
   price: z.coerce.number().optional(),
@@ -123,6 +152,31 @@ function mainCategoryThumbnailUrl(id: number): string {
 
 function subCategoryThumbnailUrl(id: number): string {
   return `${API_V1_BASE}/sub-categories/${id}/thumbnail`;
+}
+
+function normalizeCourseLanguage(raw: unknown): CourseLanguageValue {
+  const s = String(raw ?? "")
+    .trim()
+    .toUpperCase();
+  if (s === "PASHTOO" || s === "DARI" || s === "ENGLISH") return s;
+  return CourseLanguage.DARI;
+}
+
+function normalizeCourseLevel(raw: unknown): CourseLevelValue {
+  const s = String(raw ?? "")
+    .trim()
+    .toUpperCase();
+  if (s === "BEGINNER" || s === "INTERMEDIATE" || s === "ADVANCED") return s;
+  return CourseLevel.INTERMEDIATE;
+}
+
+function mediaUrlForPreview(path: unknown): string | undefined {
+  if (path == null) return undefined;
+  const u = String(path).trim();
+  if (!u) return undefined;
+  if (u.startsWith("http://") || u.startsWith("https://")) return u;
+  if (u.startsWith("/")) return u;
+  return undefined;
 }
 
 function truncateDescription(raw: unknown, max = DESC_MAX_LEN): string {
@@ -342,6 +396,9 @@ function VerticalCourseStepper({
   );
 }
 
+const selectTriggerClass =
+  "border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full min-w-0 rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60";
+
 const CourseWizardPage = () => {
   const textAreaClassName =
     "border-input bg-background ring-offset-background focus-visible:ring-ring min-h-[88px] w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 disabled:opacity-60";
@@ -377,10 +434,15 @@ const CourseWizardPage = () => {
       is_new: false,
       is_best_seller: false,
       is_free: false,
+      language: CourseLanguage.DARI,
+      level: CourseLevel.INTERMEDIATE,
     },
   });
 
-  const { register, handleSubmit, setValue, watch, formState } = form;
+  const { register, handleSubmit, setValue, watch, control, formState } = form;
+
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
   const lessonsField = useFieldArray({ control: form.control, name: "lessons" });
   const resourcesField = useFieldArray({ control: form.control, name: "downloadable_resources" });
   const quizField = useFieldArray({ control: form.control, name: "quiz_files" });
@@ -440,8 +502,8 @@ const CourseWizardPage = () => {
     setValue("short_description", String(detail.short_description ?? ""));
     setValue("long_description", String(detail.long_description ?? ""));
     setValue("prerequisites", String(detail.prerequisites ?? ""));
-    setValue("language", String(detail.language ?? ""));
-    setValue("level", String(detail.level ?? ""));
+    setValue("language", normalizeCourseLanguage(detail.language));
+    setValue("level", normalizeCourseLevel(detail.level));
     setValue("thumbnail", String(detail.thumbnail ?? ""));
     setValue("banner", String(detail.banner ?? ""));
     setValue("price", Number(detail.price ?? 0));
@@ -452,6 +514,8 @@ const CourseWizardPage = () => {
     setValue("is_new", Boolean(detail.is_new));
     setValue("is_best_seller", Boolean(detail.is_best_seller));
     setValue("is_free", Boolean(detail.is_free));
+    setThumbnailFile(null);
+    setBannerFile(null);
   }, [detailQuery.data, setValue]);
 
   const watchedValues = watch();
@@ -496,8 +560,6 @@ const CourseWizardPage = () => {
       prerequisites: values.prerequisites,
       language: values.language,
       level: values.level,
-      thumbnail: values.thumbnail,
-      banner: values.banner,
       price: values.price,
       instructor_id: values.instructor_id,
       estimated_duration: values.estimated_duration,
@@ -508,6 +570,18 @@ const CourseWizardPage = () => {
       is_free: values.is_free,
       status: "active",
     };
+
+    if (thumbnailFile) {
+      payload.thumbnail_file = thumbnailFile;
+    } else {
+      payload.thumbnail = values.thumbnail ?? "";
+    }
+
+    if (bannerFile) {
+      payload.banner_file = bannerFile;
+    } else {
+      payload.banner = values.banner ?? "";
+    }
 
     if (editId && !Number.isNaN(editId)) {
       updateMutation.mutate(
@@ -615,7 +689,7 @@ const CourseWizardPage = () => {
                       aria-label="Search main categories"
                     />
                   </div>
-                  <div >
+                  <div>
                     {mainLoading ? (
                       <div className="flex min-h-[120px] flex-1 items-center justify-center py-6">
                         <Spinner className="h-8 w-8 text-primary" />
@@ -700,7 +774,7 @@ const CourseWizardPage = () => {
                       aria-label="Search sub categories"
                     />
                   </div>
-                  <div >
+                  <div>
                     {!mainSelected ? (
                       <div className="flex min-h-[140px] flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border/80 px-4 py-8 text-center">
                         <Folder className="h-9 w-9 text-muted-foreground/45 stroke-[1]" />
@@ -772,12 +846,16 @@ const CourseWizardPage = () => {
           )}
 
           {currentStep === 1 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
+            <div className="space-y-4">
+              <input type="hidden" {...register("thumbnail")} />
+              <input type="hidden" {...register("banner")} />
+
+              <div className="space-y-1.5">
                 <Label>Title</Label>
                 <Input {...register("title")} disabled={viewMode} />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
+
+              <div className="space-y-1.5">
                 <Label>Short description</Label>
                 <textarea
                   className={textAreaClassName}
@@ -785,79 +863,157 @@ const CourseWizardPage = () => {
                   disabled={viewMode}
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Long description</Label>
-                <textarea
-                  className={textAreaClassName}
-                  {...register("long_description")}
-                  disabled={viewMode}
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Long description</Label>
+                  <Controller
+                    name="long_description"
+                    control={control}
+                    render={({ field }) => (
+                      <RichTextEditor
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={viewMode}
+                        minHeight="min-h-[220px]"
+                      />
+                    )}
+                  />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Prerequisites</Label>
+                  <Controller
+                    name="prerequisites"
+                    control={control}
+                    render={({ field }) => (
+                      <RichTextEditor
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={viewMode}
+                        minHeight="min-h-[220px]"
+                      />
+                    )}
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Language</Label>
+                  <select
+                    className={selectTriggerClass}
+                    {...register("language")}
+                    disabled={viewMode}
+                  >
+                    {COURSE_LANGUAGE_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Level</Label>
+                  <select className={selectTriggerClass} {...register("level")} disabled={viewMode}>
+                    {COURSE_LEVEL_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Price</Label>
+                  <Input type="number" step="any" {...register("price")} disabled={viewMode} />
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Instructor</Label>
+                  <select
+                    className={selectTriggerClass}
+                    {...register("instructor_id")}
+                    disabled={viewMode}
+                  >
+                    <option value="">Select instructor</option>
+                    {(
+                      (
+                        instructorsQuery.data as
+                          | { data?: Array<Record<string, unknown>> }
+                          | undefined
+                      )?.data ?? []
+                    ).map((row) => (
+                      <option key={String(row.id)} value={Number(row.user_id ?? row.id)}>
+                        {String(row.user_name ?? row.specialization ?? `Instructor #${row.id}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="min-w-0 space-y-1.5">
+                  <Label>Course duration (min)</Label>
+                  <Input type="number" {...register("estimated_duration")} disabled={viewMode} />
+                </div>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ImageDropzone
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  label="Thumbnail"
+                  hint="JPEG, PNG, WebP or GIF — click or drag to upload"
+                  value={thumbnailFile}
+                  onSelect={(file) => {
+                    setThumbnailFile(file);
+                    if (!file) setValue("thumbnail", "");
+                  }}
+                  previewMode="square"
+                  initialPreviewUrl={thumbnailFile ? null : mediaUrlForPreview(watch("thumbnail"))}
+                  initialPreviewName={(watch("thumbnail") ?? "").trim() || null}
+                />
+                <ImageDropzone
+                  accept="image/jpeg,image/png,image/webp,image/gif"
+                  label="Banner"
+                  hint="Wide image — JPEG, PNG, WebP or GIF"
+                  value={bannerFile}
+                  onSelect={(file) => {
+                    setBannerFile(file);
+                    if (!file) setValue("banner", "");
+                  }}
+                  previewMode="wide"
+                  initialPreviewUrl={bannerFile ? null : mediaUrlForPreview(watch("banner"))}
+                  initialPreviewName={(watch("banner") ?? "").trim() || null}
                 />
               </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label>Prerequisites</Label>
-                <textarea
-                  className={textAreaClassName}
-                  {...register("prerequisites")}
-                  disabled={viewMode}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Language</Label>
-                <Input {...register("language")} disabled={viewMode} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Level</Label>
-                <Input {...register("level")} disabled={viewMode} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Thumbnail</Label>
-                <Input {...register("thumbnail")} disabled={viewMode} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Banner</Label>
-                <Input {...register("banner")} disabled={viewMode} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Price</Label>
-                <Input type="number" {...register("price")} disabled={viewMode} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Instructor</Label>
-                <select
-                  className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 text-sm focus-visible:ring-2 focus-visible:outline-none disabled:opacity-60"
-                  {...register("instructor_id")}
-                  disabled={viewMode}
-                >
-                  <option value="">Select instructor</option>
-                  {(
-                    (instructorsQuery.data as { data?: Array<Record<string, unknown>> } | undefined)
-                      ?.data ?? []
-                  ).map((row) => (
-                    <option key={String(row.id)} value={Number(row.user_id ?? row.id)}>
-                      {String(row.user_name ?? row.specialization ?? `Instructor #${row.id}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Course duration (min)</Label>
-                <Input type="number" {...register("estimated_duration")} disabled={viewMode} />
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:col-span-2 sm:grid-cols-5">
-                {(
-                  ["is_featured", "is_popular", "is_new", "is_best_seller", "is_free"] as const
-                ).map((key) => (
+
+              <div className="flex flex-wrap gap-3">
+                {COURSE_DETAIL_FLAG_FIELDS.map((key) => (
                   <label
                     key={key}
-                    className="flex cursor-pointer items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm"
+                    className={cn(
+                      "flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-muted/15 px-4 py-3 transition-colors hover:bg-muted/35",
+                      viewMode && "pointer-events-none opacity-60"
+                    )}
                   >
                     <input
                       type="checkbox"
+                      className="peer sr-only"
                       {...register(key)}
                       disabled={viewMode}
-                      className="rounded border-input"
                     />
-                    <span className="capitalize">{key.replace("is_", "").replace("_", " ")}</span>
+                    <span
+                      className={cn(
+                        "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border-2 border-border bg-background shadow-inner",
+                        "transition-[border-color,background-color] duration-200 ease-out",
+                        "peer-checked:border-primary peer-checked:bg-primary",
+                        "peer-focus-visible:ring-2 peer-focus-visible:ring-ring",
+                        "peer-checked:[&_svg]:scale-100 peer-checked:[&_svg]:opacity-100"
+                      )}
+                    >
+                      <Check
+                        className="h-6 w-6 scale-50 stroke-[2.5] text-white opacity-0 transition-all duration-200 ease-out"
+                        aria-hidden
+                      />
+                    </span>
+                    <span className="text-sm font-medium text-foreground">
+                      {COURSE_DETAIL_FLAG_LABELS[key]}
+                    </span>
                   </label>
                 ))}
               </div>
