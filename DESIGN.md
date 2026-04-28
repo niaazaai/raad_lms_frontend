@@ -136,6 +136,8 @@ When a flow must fill the main content area without growing the document height:
 - Wizard shell: `h-full max-h-full overflow-hidden` on the page root for step views that use inset scrolling.
 - Scroll **only** inside designated regions (e.g. category list panels): parent column uses `flex flex-col min-h-0`, list uses `flex-1 min-h-0 overflow-y-auto`.
 - Avoid `Boolean(stringId)` for step completion; coerce IDs with `Number()` / `valueAsNumber` on hidden fields so `"0"` is not treated as completed.
+- **Step completion** for optional steps (e.g. resources, quiz files) should reflect real data (e.g. at least one row), not hardcoded “done,” so the vertical stepper does not look pre-filled.
+- **Lessons** use a **Drawer** (title, description, video) for add/edit; drag-and-drop targets shared `ImageDropzone` with `mediaPreview="video"` where appropriate.
 
 Table/list pages must use the shared DataTable pattern:
 - Server-side search, sort, pagination, and filters

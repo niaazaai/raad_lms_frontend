@@ -39,7 +39,7 @@ Browser → Host Nginx (HTTPS, security headers, routing)
 src/
 ├── assets/css/index.css         # Tailwind v4 + design tokens (CSS variables)
 ├── components/
-│   ├── ui/                      # shadcn/ui (Button, Input, Card, DataTable, DropdownMenu, etc.)
+│   ├── ui/                          # shadcn/ui (Button, Input, Card, DataTable, Drawer, **ImageDropzone** (`mediaPreview` for video), etc.)
 │   └── errors/                  # ErrorFallback, error boundary components
 ├── data/
 │   ├── constants/               # API_ENDPOINTS, REQUEST_METHODS
@@ -55,7 +55,7 @@ src/
 ├── lib/                         # Utility functions (cn, formatDate, etc.)
 ├── modules/                     # Feature modules (self-contained)
 │   ├── UserManagement/          # Users, roles, permissions: lists, forms, hooks, routes
-│   ├── Course/                  # Course catalog: hub, entity lists, form drawers, hooks, sidebar icon map
+│   ├── Course/                  # Course hub, lists, **CourseWizardPage**, **CourseViewPage**, hooks, sidebar icon map
 │   └── Notifications/           # In-app notifications (hooks, components)
 ├── pages/                       # Top-level pages
 │   ├── auth/                    # Login, Register, VerifyEmail, VerifyEmailSuccess, VerifyEmailExpired
@@ -692,6 +692,26 @@ All backend responses follow this shape:
 ```
 
 Production URL examples: `https://your-domain.com` for the SPA, `https://your-domain.com/api/v1/...` for API calls (adjust to your deployment).
+
+---
+
+## Course module — wizard, routes, catalog view
+
+**Routes** (`src/modules/Course/routes/index.tsx`):
+
+| Path | Purpose | Typical permission |
+|------|---------|-------------------|
+| `/course/courses` | Course list (table / cards) | `course.courses.read` |
+| `/course/courses/create` | Multi-step **create** wizard | `course.courses.create` |
+| `/course/courses/:courseId/edit` | Multi-step **edit** wizard | `course.courses.update` |
+| `/course/courses/:courseId/view` | **Read-only** catalog-style page (banner, thumbnail, copy, curriculum outline) | `course.courses.read` |
+| `/course/*` | Other catalog entity lists (categories, etc.) | entity-specific |
+
+Use `useCourseEntityList`, `useCourseEntityDetail`, `useCreateCourseEntity`, `useUpdateCourseEntity` from `modules/Course/hooks/useCourseEntity.ts`. Mutations set `hasFiles` automatically when the body includes a `File`; multipart uses POST + `_method` for PATCH when files are present (see `callApi`).
+
+**Course wizard** (`CourseWizardPage.tsx`): vertical stepper; persist course before later steps when creating. **Optional** steps (resources, quiz) should mark “complete” only when there is saved content (avoid fake checkmarks). **Lessons** live under modules (faasl): add/edit uses a **Drawer** with title, description, and video file (`video_file` API); use `ImageDropzone` with `mediaPreview="video"` for previews.
+
+**Course catalog view** (`CourseViewPage.tsx`): Udemy-inspired layout—not the same route as edit. Long description may contain HTML from the rich-text editor; treat XSS if content becomes student-facing publicly.
 
 ---
 

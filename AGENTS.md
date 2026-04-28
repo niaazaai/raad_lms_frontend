@@ -122,4 +122,8 @@ Build and update features in a way that stays consistent with the existing Raad 
 ## Reference Docs
 
 - `README.FRONTEND.LLM.md` → full coding standards and examples.
-- `design.md` → unified visual/layout system and token conventions.
+- `DESIGN.md` → unified visual/layout system and token conventions.
+
+## Course hub (recent surface area)
+
+- Routes live in `src/modules/Course/routes/index.tsx`: list, **create wizard**, **edit wizard**, **`/course/courses/:courseId/view`** (catalog-style read-only page). Use `useCourseEntity*` hooks and permission keys `course.courses.*`.
