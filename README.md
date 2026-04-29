@@ -27,8 +27,8 @@ React 19 + TypeScript SPA with Vite, Tailwind CSS v4, and shadcn/ui.
 - Permission management (read-only)
 - Course catalog hub (categories, courses, lessons, subscriptions, classes, etc.) with permission-gated admin UI
 - **Course wizard** — multi-step create/edit (`/course/courses/create`, `/course/courses/:id/edit`): categories, details (thumbnails/banner via multipart), **modules (faasl) + lessons** (drawer with title, description, lesson video upload), downloadable resources, quiz files
-- **Course catalog view** — read-only course landing page (`/course/courses/:id/view`): banner/thumbnail, descriptions, curriculum (module + lesson titles); “View” from the courses list; separate from the editor
-- Settings page
+- **Course catalog view** — read-only course landing page (`/course/courses/:id/view`): banner/thumbnail, descriptions, curriculum (module + lesson titles); **lesson rows open a Drawer with `LessonVideoPlayer`** (`hls.js` or native Safari HLS; progressive `<video>` fallback). Fresh URLs via `GET /api/v1/lessons/:id/playback` (`useLessonPlayback`). “View” from the courses list; separate from the editor
+9-- Settings page
 - Dark mode support
 - Responsive sidebar navigation
 - Permission-gated UI components (`<Can>`, `<CanAny>`)

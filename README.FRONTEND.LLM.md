@@ -711,7 +711,7 @@ Use `useCourseEntityList`, `useCourseEntityDetail`, `useCreateCourseEntity`, `us
 
 **Course wizard** (`CourseWizardPage.tsx`): vertical stepper; persist course before later steps when creating. **Optional** steps (resources, quiz) should mark “complete” only when there is saved content (avoid fake checkmarks). **Lessons** live under modules (faasl): add/edit uses a **Drawer** with title, description, and video file (`video_file` API); use `ImageDropzone` with `mediaPreview="video"` for previews.
 
-**Course catalog view** (`CourseViewPage.tsx`): Udemy-inspired layout—not the same route as edit. Long description may contain HTML from the rich-text editor; treat XSS if content becomes student-facing publicly.
+**Course catalog view** (`CourseViewPage.tsx`): Udemy-inspired layout—not the same route as edit. Long description may contain HTML from the rich-text editor; treat XSS if content becomes student-facing publicly. **Lesson playback:** clicking a lesson with `video_status` ready opens a **Drawer**; video uses **`LessonVideoPlayer`** with **`hls.js`** for `.m3u8` / API-relative HLS URLs (Vite `/api` proxy + Sanctum cookies) or native HLS on Safari; progressive MP4 uses `<video src>`. Prefer **`GET /lessons/:id/playback`** (`useLessonPlayback.ts`) for a fresh payload (`type`, `src`) rather than stale list data alone.
 
 ---
 

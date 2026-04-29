@@ -11,6 +11,7 @@ import {
   Xmark,
   Community,
   PageSearch,
+  Hat,
 } from "iconoir-react";
 import { useLayoutStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -42,6 +43,9 @@ interface NavItem {
 function linkIsActive(pathname: string, itemPath: string): boolean {
   if (itemPath === "/course") {
     return pathname === "/course";
+  }
+  if (itemPath === "/instructors") {
+    return pathname === "/instructors";
   }
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
@@ -116,7 +120,7 @@ const Sidebar = () => {
   const { sidebarCollapsed, mobileMenuOpen, setMobileMenuOpen } = useLayoutStore();
   const { hasPermission, hasAnyPermission, hasAnyRole } = useAuth();
   const location = useLocation();
-  const [expandedGroups, setExpandedGroups] = useState<string[]>(["User Management", "Courses"]);
+  const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
   const courseNavChildren = useMemo(
     () => courseRowsToNavItems(buildCourseSidebarRows(hasPermission)),
@@ -132,6 +136,12 @@ const Sidebar = () => {
         anyPermission: COURSE_MODULE_ANY_PERMISSIONS,
         children: courseNavChildren,
         skipChildPermissionFilter: true,
+      },
+      {
+        title: "Instructors",
+        path: "/instructors",
+        icon: <Hat className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" />,
+        permission: COURSE_ENTITY_REGISTRY.instructors.permission,
       },
       ...baseNavItems.slice(1),
     ],
