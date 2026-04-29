@@ -13,10 +13,10 @@ import {
   CreditCard,
   Repeat,
   Cash,
-  Community,
   Calendar,
   Group,
   GridPlus,
+  Hat,
 } from "iconoir-react";
 import type { CourseEntitySlug } from "./courseRegistry";
 
@@ -38,7 +38,7 @@ const ENTITY_ICON: Record<CourseEntitySlug, Ico> = {
   "subscription-plans": CreditCard,
   "course-subscriptions": Repeat,
   "student-subscriptions": Cash,
-  instructors: Community,
+  instructors: Hat,
   "lms-classes": Calendar,
   "lms-class-students": Group,
 };

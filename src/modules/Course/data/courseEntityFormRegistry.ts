@@ -330,7 +330,7 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
   },
   instructors: {
     fields: [
-      { name: "user_id", label: "User ID", type: "number", required: true },
+      { name: "user_id", label: "User", type: "number", required: true },
       { name: "bio", label: "Bio", type: "textarea" },
       { name: "specialization", label: "Specialization", type: "text" },
       { name: "status", label: "Status", type: "select", options: ACTIVE_INACTIVE },
