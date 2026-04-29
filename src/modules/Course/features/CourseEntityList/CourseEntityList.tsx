@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams, useSearchParams, useLocation } from "react-router-dom";
 import { Prohibition, CheckCircle, Eye, EditPencil, Plus, Trash, AlbumList } from "iconoir-react";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/lib/formatRelativeTime";
@@ -151,9 +151,16 @@ function StatusBadge({ value }: { value: unknown }) {
   );
 }
 
-const CourseEntityList = () => {
+export type CourseEntityListProps = {
+  /** List this entity without `:slug` in the URL (e.g. top-level `/instructors`). */
+  forcedSlug?: CourseEntitySlug;
+};
+
+const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
   const { hasPermission } = useAuth();
-  const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
+  const { slug: slugFromRoute } = useParams<{ slug: string }>();
+  const slug = forcedSlug ?? slugFromRoute;
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterCourseId, setFilterCourseId] = useState(searchParams.get("course_id") ?? "");
   const [filterClassId, setFilterClassId] = useState(searchParams.get("class_id") ?? "");
@@ -270,13 +277,29 @@ const CourseEntityList = () => {
 
     const mappedColumns = cfg.columns.map((key) => ({
       key,
-      header: key === "main_category_name" ? "Main category" : key.replace(/_/g, " "),
+      header:
+        key === "main_category_name"
+          ? "Main category"
+          : key === "user_name"
+            ? "User name"
+            : key.replace(/_/g, " "),
       sortable: key !== "id",
       filterable: key.includes("status"),
       filterOptions: key.includes("status") ? STATUS_FILTER_OPTIONS : undefined,
       render: (row: CourseRow) => {
         if (key === "main_category_name") {
           return getMainCategoryName(row);
+        }
+        if (key === "bio") {
+          const raw = row[key];
+          const text =
+            raw === null || raw === undefined ? "" : typeof raw === "string" ? raw.trim() : String(raw);
+          if (!text) return "—";
+          return (
+            <span className="line-clamp-2 max-w-xs text-left" title={text}>
+              {text}
+            </span>
+          );
         }
         if (key.includes("status")) {
           return <StatusBadge value={row[key]} />;
@@ -315,19 +338,23 @@ const CourseEntityList = () => {
       rowId: (row) => (typeof row.id === "number" ? row.id : String(row.id ?? "")),
       emptyMessage: "No records found.",
       actions: [
-        {
-          key: "view",
-          label: "View",
-          icon: <Eye className="h-4 w-4" />,
-          permission: cfg.permission,
-          onClick: (row) => {
-            const id = row.id;
-            const idNum = typeof id === "number" ? id : Number(id);
-            const canAct = typeof id === "number" || !Number.isNaN(idNum);
-            if (!canAct) return;
-            openViewDrawer(typeof id === "number" ? id : idNum);
-          },
-        },
+        ...(resolvedSlug === "instructors"
+          ? []
+          : [
+              {
+                key: "view",
+                label: "View",
+                icon: <Eye className="h-4 w-4" />,
+                permission: cfg.permission,
+                onClick: (row: CourseRow) => {
+                  const id = row.id;
+                  const idNum = typeof id === "number" ? id : Number(id);
+                  const canAct = typeof id === "number" || !Number.isNaN(idNum);
+                  if (!canAct) return;
+                  openViewDrawer(typeof id === "number" ? id : idNum);
+                },
+              },
+            ]),
         ...(resolvedSlug === "main-categories"
           ? [
               {
@@ -451,13 +478,33 @@ const CourseEntityList = () => {
   const showCourseFilter = cfg.filterParams?.includes("course_id");
   const showClassFilter = cfg.filterParams?.includes("class_id");
   const createPerm = coursePermission(cfg.permission, "create");
+  const isStandaloneInstructors =
+    resolvedSlug === "instructors" &&
+    (forcedSlug === "instructors" || location.pathname === "/instructors");
 
   return (
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <PageBreadcrumb items={[{ label: "Course", to: "/course" }, { label: cfg.title }]} />
-          <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
+          {resolvedSlug === "instructors" ? (
+            <>
+              <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
+              <div className="mt-2">
+                <PageBreadcrumb
+                  items={
+                    isStandaloneInstructors
+                      ? [{ label: "Dashboard", to: "/dashboard" }, { label: cfg.title }]
+                      : [{ label: "Course", to: "/course" }, { label: cfg.title }]
+                  }
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <PageBreadcrumb items={[{ label: "Course", to: "/course" }, { label: cfg.title }]} />
+              <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
+            </>
+          )}
         </div>
         <Can permission={createPerm}>
           <Button type="button" onClick={openCreateDrawer} className="shrink-0 gap-2">

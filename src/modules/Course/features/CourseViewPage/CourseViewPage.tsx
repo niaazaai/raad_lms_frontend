@@ -1,7 +1,16 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { EditPencil, NavArrowLeft, Play } from "iconoir-react";
-import { Button, Spinner } from "@/components/ui";
+import {
+  Button,
+  Drawer,
+  DrawerBody,
+  DrawerContent,
+  DrawerHeader,
+  DrawerOverlay,
+  DrawerTitle,
+  Spinner,
+} from "@/components/ui";
 import { Can } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import {
@@ -11,6 +20,25 @@ import {
   useCourseEntityList,
   type CourseRow,
 } from "../../hooks/useCourseEntity";
+import LessonVideoPlayer from "./LessonVideoPlayer";
+import { useLessonPlayback } from "./useLessonPlayback";
+
+function lessonRowPlayable(row: CourseRow): boolean {
+  const url = row.primary_video_url;
+  const status = String(row.video_status ?? "");
+  if (typeof url !== "string" || url.length === 0) return false;
+  if (status === "uploading" || status === "processing") return false;
+  if (status === "failed") return false;
+  return true;
+}
+
+function lessonPlaybackHint(row: CourseRow): string | undefined {
+  const status = String(row.video_status ?? "");
+  if (typeof row.primary_video_url === "string" && row.primary_video_url.length > 0) return undefined;
+  if (status === "processing" || status === "uploading") return "Processing video…";
+  if (status === "failed") return "Video failed — try re-upload from the editor.";
+  return "No video yet";
+}
 
 const CourseViewPage = () => {
   const navigate = useNavigate();
@@ -39,6 +67,10 @@ const CourseViewPage = () => {
     () => getCourseListFromResponse(lessonsQuery.data),
     [lessonsQuery.data]
   );
+
+  const [lessonPlayerId, setLessonPlayerId] = useState<number | null>(null);
+  const [lessonDrawerOpen, setLessonDrawerOpen] = useState(false);
+  const playbackQuery = useLessonPlayback(lessonPlayerId, lessonDrawerOpen && lessonPlayerId != null);
 
   const loading =
     validId == null ||
@@ -86,6 +118,11 @@ const CourseViewPage = () => {
   if (course.is_new) flagBadges.push({ key: "new", label: "New" });
   if (course.is_best_seller) flagBadges.push({ key: "bestseller", label: "Best seller" });
   if (course.is_free) flagBadges.push({ key: "free", label: "Free" });
+
+  const drawerLesson =
+    lessonPlayerId != null
+      ? lessons.find((l) => Number(l.id) === lessonPlayerId)
+      : undefined;
 
   return (
     <div className="min-h-0 pb-10">
@@ -222,23 +259,40 @@ const CourseViewPage = () => {
                         ) : (
                           modLessons.map((lesson) => {
                             const row = lesson as CourseRow;
-                            const hasVideo =
-                              typeof row.primary_video_url === "string" &&
-                              row.primary_video_url.length > 0;
+                            const playable = lessonRowPlayable(row);
+                            const hint = lessonPlaybackHint(row);
+                            const tintedPrimary =
+                              playable ||
+                              (typeof row.primary_video_url === "string" &&
+                                row.primary_video_url.length > 0);
+
                             return (
-                              <li
-                                key={Number(row.id)}
-                                className="flex items-center gap-3 px-4 py-2.5 text-sm"
-                              >
-                                <Play
+                              <li key={Number(row.id)} className="px-0 py-0">
+                                <button
+                                  type="button"
                                   className={cn(
-                                    "h-4 w-4 shrink-0",
-                                    hasVideo ? "text-primary" : "text-muted-foreground/50"
+                                    "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
+                                    playable &&
+                                      "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                                   )}
-                                />
-                                <span className="min-w-0 flex-1 font-medium text-foreground">
-                                  {String(row.title ?? "Lesson")}
-                                </span>
+                                  onClick={() => {
+                                    if (!playable) return;
+                                    setLessonPlayerId(Number(row.id));
+                                    setLessonDrawerOpen(true);
+                                  }}
+                                >
+                                  <span title={hint} className="inline-flex shrink-0">
+                                    <Play
+                                      className={cn(
+                                        "h-4 w-4",
+                                        tintedPrimary ? "text-primary" : "text-muted-foreground/50"
+                                      )}
+                                    />
+                                  </span>
+                                  <span className="min-w-0 flex-1 font-medium text-foreground">
+                                    {String(row.title ?? "Lesson")}
+                                  </span>
+                                </button>
                               </li>
                             );
                           })
@@ -278,6 +332,57 @@ const CourseViewPage = () => {
           </div>
         </aside>
       </div>
+
+      <Drawer
+        open={lessonDrawerOpen}
+        onClose={() => {
+          setLessonDrawerOpen(false);
+          setLessonPlayerId(null);
+        }}
+      >
+        <DrawerOverlay />
+        <DrawerContent className="max-h-[min(92vh,920px)] max-w-3xl overflow-auto">
+          <DrawerHeader>
+            <DrawerTitle>
+              {drawerLesson != null ? String(drawerLesson.title ?? "Lesson video") : "Lesson video"}
+            </DrawerTitle>
+          </DrawerHeader>
+          <DrawerBody className="space-y-4">
+            {drawerLesson != null && String(drawerLesson.description ?? "").trim() !== "" ? (
+              <p className="text-sm text-muted-foreground">
+                {String(drawerLesson.description ?? "").trim()}
+              </p>
+            ) : null}
+
+            {playbackQuery.isLoading ? (
+              <div className="flex justify-center py-12">
+                <Spinner className="h-10 w-10 text-primary" />
+              </div>
+            ) : null}
+
+            {playbackQuery.isError ? (
+              <p className="text-sm text-destructive">Could not load playback. Try again.</p>
+            ) : null}
+
+            {!playbackQuery.isLoading &&
+            playbackQuery.data?.success &&
+            playbackQuery.data.data?.src ? (
+              <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
+                <LessonVideoPlayer
+                  src={String(playbackQuery.data.data.src)}
+                  playbackType={playbackQuery.data.data.type}
+                />
+              </div>
+            ) : null}
+
+            {!playbackQuery.isLoading &&
+            playbackQuery.data?.success &&
+            !playbackQuery.data.data?.src ? (
+              <p className="text-sm text-muted-foreground">No playable URL for this lesson.</p>
+            ) : null}
+          </DrawerBody>
+        </DrawerContent>
+      </Drawer>
     </div>
   );
 };

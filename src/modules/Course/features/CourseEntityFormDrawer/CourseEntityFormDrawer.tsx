@@ -176,20 +176,41 @@ const CourseEntityFormDrawer = ({
 }: CourseEntityFormDrawerProps) => {
   const def = COURSE_ENTITY_FORM_REGISTRY[slug];
   const readOnly = mode === "view";
-  const needsMeta = slug === "sub-categories";
-  const { data: metaRes, isLoading: metaLoading } = useCourseFormMeta(
-    needsMeta ? "sub-categories" : null
-  );
+  const formMetaKey =
+    slug === "sub-categories" ? "sub-categories" : slug === "instructors" ? "instructors" : null;
+  const { data: metaRes, isLoading: metaLoading } = useCourseFormMeta(formMetaKey);
   const meta = metaRes?.data;
   const mainCategoryOptions = useMemo(() => {
     const rows = meta?.main_categories ?? [];
     return rows.map((r) => ({ value: String(r.id), label: `${r.title} (#${r.id})` }));
-  }, [meta]);
+  }, [meta?.main_categories]);
 
   const { data: detailRes, isLoading: loadingDetail } = useCourseEntityDetail(slug, entityId, {
     enabled: mode !== "create" && entityId != null,
   });
   const detail = getCourseEntityDetailFromResponse(detailRes);
+
+  const instructorUserOptions = useMemo(() => {
+    const rows = meta?.instructor_users ?? [];
+    const opts = rows.map((r) => ({
+      value: String(r.id),
+      label: `${r.name} (${r.email}) · ${r.type}`,
+    }));
+    if (mode !== "create" && detail) {
+      const rawId = detail.user_id;
+      if (rawId !== null && rawId !== undefined && String(rawId).trim() !== "") {
+        const uid = String(rawId);
+        if (!opts.some((o) => o.value === uid)) {
+          const uname =
+            typeof detail.user_name === "string" && detail.user_name.trim() !== ""
+              ? String(detail.user_name)
+              : `User #${uid}`;
+          return [{ value: uid, label: `${uname} (#${uid})` }, ...opts];
+        }
+      }
+    }
+    return opts;
+  }, [meta?.instructor_users, mode, detail]);
 
   const { mutate: createEntity, isPending: creating } = useCreateCourseEntity(slug);
   const { mutate: updateEntity, isPending: updating } = useUpdateCourseEntity(slug);
@@ -331,9 +352,11 @@ const CourseEntityFormDrawer = ({
         <DrawerDescription>
           {readOnly
             ? "Tidy entity overview."
-            : mode === "create"
-              ? "Fill in the fields and save. IDs reference other records in the LMS."
-              : "Update fields and save changes."}
+            : slug === "instructors" && mode === "create"
+              ? "Pick any user account (any type). Each user can have at most one instructor profile; course access still follows RBAC."
+              : mode === "create"
+                ? "Fill in the fields and save. IDs reference other records in the LMS."
+                : "Update fields and save changes."}
         </DrawerDescription>
       </DrawerHeader>
 
@@ -415,8 +438,36 @@ const CourseEntityFormDrawer = ({
             </>
           )}
 
+          {slug === "instructors" && (
+            <>
+              {!readOnly ? (
+                <>
+                  <Controller
+                    name="user_id"
+                    control={control}
+                    render={({ field }) => (
+                      <SearchableSelect
+                        id="cef-instructor-user"
+                        label="User"
+                        required
+                        options={instructorUserOptions}
+                        value={String(field.value ?? "")}
+                        onChange={field.onChange}
+                        placeholder="Search and select…"
+                        disabled={metaLoading || mode === "edit"}
+                        searchPlaceholder="Search by name or email…"
+                      />
+                    )}
+                  />
+                  {renderStandardFields(def.fields.filter((f) => f.name !== "user_id"))}
+                </>
+              ) : null}
+            </>
+          )}
+
           {slug !== "main-categories" &&
             slug !== "sub-categories" &&
+            slug !== "instructors" &&
             !readOnly &&
             renderStandardFields(def.fields)}
         </DrawerBody>
