@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Resolver } from "react-hook-form";
 import { Controller, useForm } from "react-hook-form";
@@ -56,6 +57,10 @@ import {
   useDeleteCourseEntity,
   useUpdateCourseEntity,
 } from "../../hooks/useCourseEntity";
+import {
+  abortLessonMultipartUpload,
+  uploadLessonVideoMultipart,
+} from "../../services/lessonVideoMultipartUpload";
 
 const COURSE_DETAIL_FLAG_FIELDS = [
   "is_featured",
@@ -780,8 +785,55 @@ const CourseWizardPage = () => {
     setCurrentStep(index);
   };
 
-  const invalidateCourseLists = () => {
+  const invalidateCourseLists = useCallback(() => {
     void queryClient.invalidateQueries({ queryKey: ["course"] });
+  }, [queryClient]);
+
+  /** 0–100 while multipart upload runs in background (lesson id keyed). */
+  const [lessonVideoUploadPct, setLessonVideoUploadPct] = useState<Record<number, number>>({});
+
+  const beginLessonVideoUpload = useCallback(
+    (lessonId: number, file: File) => {
+      setLessonVideoUploadPct((prev) => ({ ...prev, [lessonId]: 0 }));
+      void uploadLessonVideoMultipart(lessonId, file, {
+        onProgress: (loaded, total) =>
+          setLessonVideoUploadPct((prev) => ({
+            ...prev,
+            [lessonId]: total > 0 ? Math.round((loaded / total) * 100) : 0,
+          })),
+      })
+        .then(() => {
+          toast.success("Video uploaded; transcoding started.");
+          setLessonVideoUploadPct((prev) => {
+            const next = { ...prev };
+            delete next[lessonId];
+            return next;
+          });
+          invalidateCourseLists();
+        })
+        .catch((err: unknown) => {
+          toast.error(err instanceof Error ? err.message : "Video upload failed");
+          setLessonVideoUploadPct((prev) => {
+            const next = { ...prev };
+            delete next[lessonId];
+            return next;
+          });
+          void abortLessonMultipartUpload(lessonId).catch(() => undefined);
+        });
+    },
+    [invalidateCourseLists]
+  );
+
+  const closeLessonDrawer = () => {
+    setLessonDrawerOpen(false);
+    setLessonDraft({
+      moduleId: 0,
+      lessonId: null,
+      title: "",
+      description: "",
+      videoFile: null,
+      existingVideoUrl: null,
+    });
   };
 
   const mainLoading = mainCategoriesQuery.isFetching;
@@ -1317,16 +1369,17 @@ const CourseWizardPage = () => {
                     );
                     return (
                       <div key={mid} className="overflow-hidden rounded-lg border border-border bg-card">
-                        <button
-                          type="button"
-                          className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/40"
-                          onClick={() =>
-                            setExpandedModules((prev) => ({ ...prev, [mid]: !open }))
-                          }
-                        >
-                          <span className="min-w-0 flex-1 truncate font-semibold text-foreground">
-                            {String(mod.title ?? "")}
-                          </span>
+                        <div className="flex w-full items-center justify-between gap-3 px-4 py-3 transition-colors hover:bg-muted/40">
+                          <button
+                            type="button"
+                            className="flex min-w-0 flex-1 items-center text-left font-semibold text-foreground transition-colors"
+                            onClick={() =>
+                              setExpandedModules((prev) => ({ ...prev, [mid]: !open }))
+                            }
+                            aria-expanded={open}
+                          >
+                            <span className="truncate">{String(mod.title ?? "")}</span>
+                          </button>
                           {!viewMode ? (
                             <span className="flex shrink-0 items-center gap-1">
                               <Button
@@ -1334,8 +1387,7 @@ const CourseWizardPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() => {
                                   setModuleRenameDialog({
                                     open: true,
                                     id: mid,
@@ -1350,8 +1402,7 @@ const CourseWizardPage = () => {
                                 variant="ghost"
                                 size="sm"
                                 className="h-8 px-2 text-danger hover:text-danger"
-                                onClick={(e) => {
-                                  e.stopPropagation();
+                                onClick={() => {
                                   deleteFaaslMutation.mutate(mid, {
                                     onSuccess: () => invalidateCourseLists(),
                                   });
@@ -1361,62 +1412,123 @@ const CourseWizardPage = () => {
                               </Button>
                             </span>
                           ) : null}
-                        </button>
+                        </div>
                         {open ? (
                           <div className="space-y-2 border-t border-border bg-muted/10 px-4 py-3">
                             {lessonsForModule.length === 0 ? (
-                              <p className="text-xs text-muted-foreground">
-                                No lessons in this module yet.
-                              </p>
+                              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-xs text-muted-foreground">
+                                  No lessons in this module yet — add a lesson title, then optionally attach
+                                  a video (upload runs in the background after you save).
+                                </p>
+                                {!viewMode ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="shrink-0 self-start sm:self-center"
+                                    onClick={() => {
+                                      setLessonDraft({
+                                        moduleId: mid,
+                                        lessonId: null,
+                                        title: "",
+                                        description: "",
+                                        videoFile: null,
+                                        existingVideoUrl: null,
+                                      });
+                                      setLessonDrawerOpen(true);
+                                    }}
+                                  >
+                                    <Plus className="mr-2 h-4 w-4" strokeWidth={1.5} />
+                                    Add lesson
+                                  </Button>
+                                ) : null}
+                              </div>
                             ) : (
                               lessonsForModule.map((lesson) => {
                                 const lid = Number(lesson.id);
+                                const pct = lessonVideoUploadPct[lid];
+                                const vStatus = String(lesson.video_status ?? "");
+                                const showDeterminate = pct !== undefined;
+                                const showIndeterminate =
+                                  pct === undefined && vStatus === "uploading";
+
                                 return (
                                   <div
                                     key={lid}
-                                    className="flex items-center justify-between gap-3 rounded-md border border-border bg-background px-3 py-2"
+                                    className="space-y-2 rounded-md border border-border bg-background px-3 py-2"
                                   >
-                                    <span className="min-w-0 truncate text-sm font-medium">
-                                      {String(lesson.title ?? "")}
-                                    </span>
-                                    {!viewMode ? (
-                                      <span className="flex shrink-0 items-center gap-1">
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 px-2"
-                                          onClick={() => {
-                                            setLessonDraft({
-                                              moduleId: mid,
-                                              lessonId: lid,
-                                              title: String(lesson.title ?? ""),
-                                              description: String(lesson.description ?? ""),
-                                              videoFile: null,
-                                              existingVideoUrl:
-                                                typeof lesson.primary_video_url === "string"
-                                                  ? lesson.primary_video_url
-                                                  : null,
-                                            });
-                                            setLessonDrawerOpen(true);
-                                          }}
-                                        >
-                                          <EditPencil className="h-4 w-4" strokeWidth={1.5} />
-                                        </Button>
-                                        <Button
-                                          type="button"
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-8 px-2 text-danger hover:text-danger"
-                                          onClick={() =>
-                                            deleteLessonMutation.mutate(lid, {
-                                              onSuccess: () => invalidateCourseLists(),
-                                            })
-                                          }
-                                        >
-                                          <Trash className="h-4 w-4" strokeWidth={1.5} />
-                                        </Button>
+                                    <div className="flex items-center justify-between gap-3">
+                                      <span className="min-w-0 truncate text-sm font-medium">
+                                        {String(lesson.title ?? "")}
                                       </span>
+                                      {!viewMode ? (
+                                        <span className="flex shrink-0 items-center gap-1">
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2"
+                                            onClick={() => {
+                                              setLessonDraft({
+                                                moduleId: mid,
+                                                lessonId: lid,
+                                                title: String(lesson.title ?? ""),
+                                                description: String(lesson.description ?? ""),
+                                                videoFile: null,
+                                                existingVideoUrl:
+                                                  typeof lesson.primary_video_url === "string"
+                                                    ? lesson.primary_video_url
+                                                    : null,
+                                              });
+                                              setLessonDrawerOpen(true);
+                                            }}
+                                          >
+                                            <EditPencil className="h-4 w-4" strokeWidth={1.5} />
+                                          </Button>
+                                          <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-8 px-2 text-danger hover:text-danger"
+                                            onClick={() =>
+                                              deleteLessonMutation.mutate(lid, {
+                                                onSuccess: () => invalidateCourseLists(),
+                                              })
+                                            }
+                                          >
+                                            <Trash className="h-4 w-4" strokeWidth={1.5} />
+                                          </Button>
+                                        </span>
+                                      ) : null}
+                                    </div>
+                                    {showDeterminate || showIndeterminate ? (
+                                      <div className="space-y-1">
+                                        <div className="flex justify-between text-[11px] text-muted-foreground">
+                                          <span>
+                                            {showDeterminate
+                                              ? "Uploading video"
+                                              : "Preparing upload…"}
+                                          </span>
+                                          {showDeterminate ? <span>{pct}%</span> : null}
+                                        </div>
+                                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                          {showDeterminate ? (
+                                            <div
+                                              className="h-full bg-primary transition-[width] duration-300"
+                                              style={{ width: `${pct}%` }}
+                                            />
+                                          ) : (
+                                            <div className="h-full w-1/3 animate-pulse rounded-full bg-primary/80" />
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : vStatus && vStatus !== "ready" ? (
+                                      <p className="text-[11px] capitalize text-muted-foreground">
+                                        {vStatus === "failed"
+                                          ? `Video failed: ${String(lesson.video_error ?? "Error")}`
+                                          : `Video: ${vStatus.replace(/_/g, " ")}`}
+                                      </p>
                                     ) : null}
                                   </div>
                                 );
@@ -2040,20 +2152,7 @@ const CourseWizardPage = () => {
         </div>
       ) : null}
 
-      <Drawer
-        open={lessonDrawerOpen}
-        onClose={() => {
-          setLessonDrawerOpen(false);
-          setLessonDraft({
-            moduleId: 0,
-            lessonId: null,
-            title: "",
-            description: "",
-            videoFile: null,
-            existingVideoUrl: null,
-          });
-        }}
-      >
+      <Drawer open={lessonDrawerOpen} onClose={closeLessonDrawer}>
         <DrawerOverlay />
         <DrawerContent>
           <DrawerHeader>
@@ -2095,7 +2194,7 @@ const CourseWizardPage = () => {
                 accept="video/mp4,video/webm,video/quicktime,video/*"
                 mediaPreview="video"
                 label="Video"
-                hint="MP4, WebM, MOV — stored on the server; large files may take a moment"
+                hint="MP4, WebM, MOV — uploads go directly to storage in the background; you can add more lessons while one is uploading."
                 value={lessonDraft.videoFile}
                 onSelect={(file) => setLessonDraft((d) => ({ ...d, videoFile: file }))}
                 previewMode="wide"
@@ -2113,21 +2212,7 @@ const CourseWizardPage = () => {
             </div>
           </DrawerBody>
           <DrawerFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setLessonDrawerOpen(false);
-                setLessonDraft({
-                  moduleId: 0,
-                  lessonId: null,
-                  title: "",
-                  description: "",
-                  videoFile: null,
-                  existingVideoUrl: null,
-                });
-              }}
-            >
+            <Button type="button" variant="outline" onClick={closeLessonDrawer}>
               Cancel
             </Button>
             <Button
@@ -2140,54 +2225,57 @@ const CourseWizardPage = () => {
                 viewMode
               }
               onClick={() => {
-                const cid = effectiveCourseId;
-                if (!cid || !lessonDraft.title.trim()) return;
-                const title = lessonDraft.title.trim();
-                const description = lessonDraft.description.trim();
-                if (lessonDraft.lessonId != null) {
-                  const body: Record<string, unknown> = { title };
-                  if (description) body.description = description;
-                  if (lessonDraft.videoFile) body.video_file = lessonDraft.videoFile;
-                  updateLessonMutation.mutate(
-                    { id: lessonDraft.lessonId, body },
-                    {
-                      onSuccess: () => {
-                        setLessonDrawerOpen(false);
-                        setLessonDraft({
-                          moduleId: 0,
-                          lessonId: null,
-                          title: "",
-                          description: "",
-                          videoFile: null,
-                          existingVideoUrl: null,
-                        });
+                void (async () => {
+                  const cid = effectiveCourseId;
+                  if (!cid || !lessonDraft.title.trim()) return;
+                  const title = lessonDraft.title.trim();
+                  const description = lessonDraft.description.trim();
+                  const videoFile = lessonDraft.videoFile;
+                  const moduleId = lessonDraft.moduleId;
+                  const existingLessonId = lessonDraft.lessonId;
+
+                  try {
+                    if (existingLessonId != null) {
+                      const body: Record<string, unknown> = { title };
+                      if (description) body.description = description;
+
+                      await updateLessonMutation.mutateAsync({
+                        id: existingLessonId,
+                        body,
+                      });
+
+                      closeLessonDrawer();
+
+                      if (videoFile) {
+                        beginLessonVideoUpload(existingLessonId, videoFile);
+                      } else {
                         invalidateCourseLists();
-                      },
+                      }
+                      return;
                     }
-                  );
-                  return;
-                }
-                const body: Record<string, unknown> = {
-                  course_id: cid,
-                  course_module_id: lessonDraft.moduleId,
-                  title,
-                };
-                if (description) body.description = description;
-                if (lessonDraft.videoFile) body.video_file = lessonDraft.videoFile;
-                createLessonMutation.mutate(body, {
-                  onSuccess: () => {
-                    setLessonDrawerOpen(false);
-                    setLessonDraft({
-                      moduleId: 0,
-                      lessonId: null,
-                      title: "",
-                      description: "",
-                      videoFile: null,
-                      existingVideoUrl: null,
-                    });
-                    invalidateCourseLists();
-                  },
-                });
+
+                    const body: Record<string, unknown> = {
+                      course_id: cid,
+                      course_module_id: moduleId,
+                      title,
+                    };
+                    if (description) body.description = description;
+
+                    const res = await createLessonMutation.mutateAsync(body);
+                    const row = getCourseEntityDetailFromResponse(res as unknown);
+                    const newId = Number(row?.id ?? 0);
+
+                    closeLessonDrawer();
+
+                    if (videoFile && newId > 0) {
+                      beginLessonVideoUpload(newId, videoFile);
+                    } else {
+                      invalidateCourseLists();
+                    }
+                  } catch (e: unknown) {
+                    toast.error(e instanceof Error ? e.message : "Could not save lesson");
+                  }
+                })();
               }}
             >
               {createLessonMutation.isPending || updateLessonMutation.isPending ? (
