@@ -7,8 +7,16 @@ export type MainCategoryOption = {
   status: string;
 };
 
+export type InstructorUserOption = {
+  id: number;
+  name: string;
+  email: string;
+  type: string;
+};
+
 export type CourseFormMetaData = {
   main_categories?: MainCategoryOption[];
+  instructor_users?: InstructorUserOption[];
 };
 
 export function useCourseFormMeta(forKey: string | null) {

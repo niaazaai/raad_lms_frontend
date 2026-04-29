@@ -6,7 +6,6 @@ import { ArrowLeft } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
-import { getDashboardPath } from "@/data/models/User";
 import { callApi, fetchCsrfCookie } from "@/services";
 import { API_ENDPOINTS } from "@/data/constants/endpoints";
 import { RequestMethod } from "@/data/constants/methods";
@@ -42,8 +41,7 @@ const LoginWith2FA = () => {
     try {
       const success = await verify2FA(pending2FA.token, data.code);
       if (success) {
-        const user = useAuthStore.getState().user;
-        navigate(getDashboardPath(user?.type ?? "student"), { replace: true });
+        navigate("/dashboard", { replace: true });
       } else {
         const currentError = useAuthStore.getState().error;
         setError("code", { type: "manual", message: currentError || "Invalid code" });

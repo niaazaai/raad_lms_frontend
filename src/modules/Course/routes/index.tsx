@@ -29,6 +29,12 @@ const courseAnyPermissions = [
 
 export const CourseModuleRoutes: ProtectedRouteType[] = [
   {
+    path: "/instructors",
+    component: <CourseEntityList forcedSlug="instructors" />,
+    permission: "course.instructors.read",
+    anyPermission: courseAnyPermissions,
+  },
+  {
     path: "/course/courses",
     component: <CoursesPage />,
     permission: "course.courses.read",
