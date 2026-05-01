@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { useForm, Controller } from "react-hook-form";
-import { FloppyDisk } from "iconoir-react";
+import { useForm, Controller, useWatch } from "react-hook-form";
+import { Calendar, Cash, FloppyDisk, Hashtag, Page, User } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { useQueryApi } from "@/hooks";
+import { RequestMethod } from "@/data/constants/methods";
 import type { CourseEntitySlug } from "../../data/courseRegistry";
 import {
   COURSE_ENTITY_FORM_REGISTRY,
@@ -14,7 +16,9 @@ import {
 import type { CourseEntityFormField } from "../../data/courseEntityFormRegistry";
 import {
   getCourseEntityDetailFromResponse,
+  getCourseListFromResponse,
   useCourseEntityDetail,
+  useCourseEntityList,
   useCreateCourseEntity,
   useUpdateCourseEntity,
 } from "../../hooks/useCourseEntity";
@@ -27,6 +31,9 @@ import {
   DrawerHeader,
   DrawerTitle,
   ImageDropzone,
+  Input,
+  Label,
+  RichTextEditor,
   SearchableSelect,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
@@ -49,7 +56,12 @@ const inputClass = cn(
   "focus-visible:ring-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
 );
 
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function validateRequired(values: FormValues, slug: CourseEntitySlug): string | null {
+  if (slug === "student-subscriptions") return null;
   const fields = getSerializeFieldsForSlug(slug);
   for (const f of fields) {
     if (!f.required) continue;
@@ -103,9 +115,15 @@ function renderFieldControl(
       />
     );
   }
-  if (f.type === "date") {
+  if (f.type === "date" || f.type === "time") {
     return (
-      <input id={id} type="date" className={inputClass} disabled={readOnly} {...register(f.name)} />
+      <input
+        id={id}
+        type={f.type === "time" ? "time" : "date"}
+        className={inputClass}
+        disabled={readOnly}
+        {...register(f.name)}
+      />
     );
   }
   if (f.type === "select") {
@@ -167,6 +185,11 @@ function CategoryDrawerViewImage({ src, title }: { src: string; title: string })
   );
 }
 
+const SUB_FREE_PAID_OPTIONS = [
+  { value: "free", label: "Free" },
+  { value: "paid", label: "Paid" },
+];
+
 const CourseEntityFormDrawer = ({
   slug,
   entityTitle,
@@ -190,6 +213,122 @@ const CourseEntityFormDrawer = ({
   });
   const detail = getCourseEntityDetailFromResponse(detailRes);
 
+  const coursesWithPlansQuery = useCourseEntityList(
+    slug === "student-subscriptions" ? "courses" : null,
+    { has_subscription_plans: 1, per_page: 200 },
+    { enabled: slug === "student-subscriptions" && !readOnly }
+  );
+  const courseOptions = useMemo(() => {
+    const rows = getCourseListFromResponse(coursesWithPlansQuery.data);
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.title ?? "Course")} (#${r.id})`,
+    }));
+  }, [coursesWithPlansQuery.data]);
+
+  const { data: studentUsersRes } = useQueryApi<Record<string, unknown>[]>({
+    queryKey: ["users", "student-picker"],
+    url: "/users",
+    method: RequestMethod.GET,
+    params: { type: "student", per_page: 200 },
+    options: { enabled: slug === "student-subscriptions" && !readOnly },
+  });
+  const studentUserOptions = useMemo(() => {
+    const envelope = studentUsersRes as { data?: unknown } | undefined;
+    const raw = envelope?.data;
+    const fromApi = Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+    return fromApi.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.name ?? "")} (${String(r.email ?? "")})`,
+    }));
+  }, [studentUsersRes]);
+
+  const { register, handleSubmit, reset, control, setValue, getValues, formState } = useForm<FormValues>({
+    defaultValues: getCreateDefaultsForEntity(slug),
+    mode: "onSubmit",
+    reValidateMode: "onSubmit",
+  });
+
+  const watchedCourseId = useWatch({ control, name: "course_id", defaultValue: "" });
+  const courseIdNum = Number(watchedCourseId) || 0;
+
+  const attachedPlansQuery = useCourseEntityList(
+    slug === "student-subscriptions" && courseIdNum > 0 ? "subscription-plans" : null,
+    { attached_to_course: courseIdNum, per_page: 100 },
+    { enabled: slug === "student-subscriptions" && courseIdNum > 0 && !readOnly }
+  );
+  const planOptions = useMemo(() => {
+    const rows = getCourseListFromResponse(attachedPlansQuery.data);
+    return rows.map((r) => {
+      const price = r.price != null ? String(r.price) : "—";
+      const days = r.duration_in_days != null ? String(r.duration_in_days) : "—";
+      const typ = String(r.subscription_type ?? "");
+      return {
+        value: String(r.id),
+        label: `${String(r.plan_name ?? "Plan")} · ${price} · ${days}d · ${typ}`,
+      };
+    });
+  }, [attachedPlansQuery.data]);
+
+  const [voucherFile, setVoucherFile] = useState<File | null>(null);
+
+  const courseOptionsQuery = useCourseEntityList(
+    slug === "lms-classes" ? "courses" : null,
+    { per_page: 200 },
+    { enabled: slug === "lms-classes" && !readOnly }
+  );
+  const lmsClassCourseOptions = useMemo(() => {
+    const rows = getCourseListFromResponse(courseOptionsQuery.data);
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.title ?? "Course")} (#${r.id})`,
+      title: String(r.title ?? ""),
+    }));
+  }, [courseOptionsQuery.data]);
+
+  const instructorOptionsQuery = useCourseEntityList(
+    slug === "lms-classes" ? "instructors" : null,
+    { per_page: 200 },
+    { enabled: slug === "lms-classes" && !readOnly }
+  );
+  const lmsClassInstructorOptions = useMemo(() => {
+    const rows = getCourseListFromResponse(instructorOptionsQuery.data);
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.user_name ?? "Instructor")} (#${String(r.id)})`,
+    }));
+  }, [instructorOptionsQuery.data]);
+
+  const classOptionsQuery = useCourseEntityList(
+    slug === "lms-class-students" ? "lms-classes" : null,
+    { per_page: 200 },
+    { enabled: slug === "lms-class-students" && !readOnly }
+  );
+  const lmsStudentClassOptions = useMemo(() => {
+    const rows = getCourseListFromResponse(classOptionsQuery.data);
+    return rows.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.name ?? "Class")} (#${r.id})`,
+    }));
+  }, [classOptionsQuery.data]);
+
+  const studentUsersQuery = useQueryApi<Record<string, unknown>[]>({
+    queryKey: ["users", "student-picker", "class-students"],
+    url: "/users",
+    method: RequestMethod.GET,
+    params: { type: "student", per_page: 200 },
+    options: { enabled: slug === "lms-class-students" && !readOnly },
+  });
+  const classStudentUserOptions = useMemo(() => {
+    const envelope = studentUsersQuery.data as { data?: unknown } | undefined;
+    const raw = envelope?.data;
+    const fromApi = Array.isArray(raw) ? (raw as Record<string, unknown>[]) : [];
+    return fromApi.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.name ?? "")} (${String(r.email ?? "")})`,
+    }));
+  }, [studentUsersQuery.data]);
+
   const instructorUserOptions = useMemo(() => {
     const rows = meta?.instructor_users ?? [];
     const opts = rows.map((r) => ({
@@ -212,39 +351,163 @@ const CourseEntityFormDrawer = ({
     return opts;
   }, [meta?.instructor_users, mode, detail]);
 
+  useEffect(() => {
+    if (slug !== "lms-classes" || readOnly) return;
+    const selected = lmsClassCourseOptions.find((opt) => opt.value === String(watchedCourseId ?? ""));
+    if (!selected?.title) return;
+    const currentName = String(getValues("name") ?? "").trim();
+    if (!formState.dirtyFields.name || currentName === "") {
+      setValue("name", selected.title, { shouldDirty: false });
+    }
+  }, [
+    slug,
+    readOnly,
+    watchedCourseId,
+    lmsClassCourseOptions,
+    getValues,
+    setValue,
+    formState.dirtyFields.name,
+  ]);
+
   const { mutate: createEntity, isPending: creating } = useCreateCourseEntity(slug);
   const { mutate: updateEntity, isPending: updating } = useUpdateCourseEntity(slug);
   const submitting = creating || updating;
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
 
-  const { register, handleSubmit, reset, control } = useForm<FormValues>({
-    defaultValues: getCreateDefaultsForEntity(slug),
-    mode: "onSubmit",
-    reValidateMode: "onSubmit",
-  });
-
   useEffect(() => {
+    if (slug === "student-subscriptions") {
+      if (mode === "create") {
+        reset({
+          course_id: "",
+          user_id: "",
+          plan_id: "",
+          subscription_start_date: todayISO(),
+          subscription_end_date: "",
+          purchase_date: todayISO(),
+        });
+        setVoucherFile(null);
+        return;
+      }
+      if (detail) {
+        reset({
+          course_id: String(detail.course_id ?? ""),
+          user_id: String(detail.user_id ?? ""),
+          plan_id: String(detail.plan_id ?? ""),
+          subscription_start_date: String(detail.subscription_start_date ?? "").slice(0, 10),
+          subscription_end_date: String(detail.subscription_end_date ?? "").slice(0, 10),
+          purchase_date: String(detail.purchase_date ?? "").slice(0, 10),
+        });
+        setVoucherFile(null);
+      }
+      return;
+    }
     if (mode === "create") {
       reset(getCreateDefaultsForEntity(slug));
       setThumbnailFile(null);
+      setVoucherFile(null);
       return;
     }
     if (detail) {
       reset(courseRowToFormValuesForSlug(slug, detail, def.fields));
       setThumbnailFile(null);
+      setVoucherFile(null);
     }
   }, [mode, slug, detail, reset, def.fields]);
 
   const onSubmit = (values: FormValues) => {
     if (readOnly) return;
-    const err = validateRequired(values, slug);
+    const normalizedValues: FormValues = { ...values };
+    if (slug === "lms-classes") {
+      for (const key of ["start_time", "end_time"] as const) {
+        const raw = String(normalizedValues[key] ?? "").trim();
+        if (/^\d{2}:\d{2}$/.test(raw)) {
+          normalizedValues[key] = `${raw}:00`;
+        }
+      }
+    }
+
+    if (slug === "student-subscriptions") {
+      const courseId = Number(values.course_id);
+      const userId = Number(values.user_id);
+      const planId = Number(values.plan_id);
+      if (!courseId || !userId || !planId) {
+        toast.error("Course, student, and plan are required.");
+        return;
+      }
+      if (!values.subscription_start_date || !values.purchase_date) {
+        toast.error("Start date and purchase date are required.");
+        return;
+      }
+      const body: Record<string, unknown> = {
+        course_id: courseId,
+        user_id: userId,
+        plan_id: planId,
+        subscription_start_date: values.subscription_start_date,
+        subscription_end_date: values.subscription_end_date || null,
+        purchase_date: values.purchase_date,
+      };
+      if (voucherFile) body.voucher_file = voucherFile;
+
+      if (mode === "create") {
+        createEntity(body, {
+          onSuccess: () => onSuccess(),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Create failed"),
+        });
+        return;
+      }
+      if (entityId == null) return;
+      updateEntity(
+        { id: entityId, body },
+        {
+          onSuccess: () => onSuccess(),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Update failed"),
+        }
+      );
+      return;
+    }
+
+    if (slug === "subscription-plans") {
+      const payload: Record<string, unknown> = {
+        plan_name: String(values.plan_name ?? "").trim(),
+        plan_description: String(values.plan_description ?? ""),
+        price: Number(values.price),
+        duration_in_days: Number(values.duration_in_days),
+        subscription_type: String(values.subscription_type || "free"),
+      };
+      if (!payload.plan_name) {
+        toast.error("Plan name is required.");
+        return;
+      }
+      if (Number.isNaN(payload.price) || Number.isNaN(payload.duration_in_days)) {
+        toast.error("Price and duration must be valid numbers.");
+        return;
+      }
+      if (mode === "create") {
+        createEntity(payload, {
+          onSuccess: () => onSuccess(),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Create failed"),
+        });
+        return;
+      }
+      if (entityId == null) return;
+      updateEntity(
+        { id: entityId, body: payload },
+        {
+          onSuccess: () => onSuccess(),
+          onError: (e: unknown) => toast.error(e instanceof Error ? e.message : "Update failed"),
+        }
+      );
+      return;
+    }
+
+    const err = validateRequired(normalizedValues, slug);
     if (err) {
       toast.error(err);
       return;
     }
     const fields = getSerializeFieldsForSlug(slug);
-    const payload = serializeCourseEntityPayload(values, fields);
+    const payload = serializeCourseEntityPayload(normalizedValues, fields);
     if (THUMB_SLUGS.includes(slug) && thumbnailFile) {
       payload.thumbnail_file = thumbnailFile;
     }
@@ -345,19 +608,25 @@ const CourseEntityFormDrawer = ({
     );
   };
 
+  const drawerDescription = readOnly
+    ? "Summary of this record."
+    : slug === "subscription-plans"
+      ? mode === "create"
+        ? "Plans are reusable templates. Set pricing and copy here; attach up to three plans per course from the course wizard."
+        : "Update the plan template. Courses already linked in the wizard keep their attachments until you change them there."
+      : slug === "student-subscriptions"
+        ? "Link a learner to a course and an attached plan. A unique subscription ID is created automatically. Payment defaults to pending."
+        : slug === "instructors" && mode === "create"
+          ? "Pick any user account (any type). Each user can have at most one instructor profile; course access still follows RBAC."
+          : mode === "create"
+            ? "Fill in the fields and save. IDs reference other records in the LMS."
+            : "Update fields and save changes.";
+
   return (
     <>
       <DrawerHeader>
         <DrawerTitle>{heading}</DrawerTitle>
-        <DrawerDescription>
-          {readOnly
-            ? "Tidy entity overview."
-            : slug === "instructors" && mode === "create"
-              ? "Pick any user account (any type). Each user can have at most one instructor profile; course access still follows RBAC."
-              : mode === "create"
-                ? "Fill in the fields and save. IDs reference other records in the LMS."
-                : "Update fields and save changes."}
-        </DrawerDescription>
+        <DrawerDescription>{drawerDescription}</DrawerDescription>
       </DrawerHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -365,9 +634,350 @@ const CourseEntityFormDrawer = ({
           {readOnly && (slug === "main-categories" || slug === "sub-categories")
             ? renderCategoryReadOnly()
             : null}
-          {readOnly && slug !== "main-categories" && slug !== "sub-categories" ? (
+
+          {readOnly && slug === "subscription-plans" && detail ? (
+            <div className="space-y-4">
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Plan name
+                </p>
+                <p className="text-lg font-semibold text-foreground">{String(detail.plan_name ?? "—")}</p>
+              </div>
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none text-foreground"
+                dangerouslySetInnerHTML={{
+                  __html: String(detail.plan_description ?? "<p>—</p>"),
+                }}
+              />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">Price</p>
+                  <p className="font-medium">{String(detail.price ?? "—")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">Duration (days)</p>
+                  <p className="font-medium">{String(detail.duration_in_days ?? "—")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <p className="text-xs text-muted-foreground">Type</p>
+                  <p className="font-medium">{String(detail.subscription_type ?? "—")}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {readOnly && slug === "student-subscriptions" && detail ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex gap-3 rounded-lg border border-border bg-card p-4">
+                  <Hashtag className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Subscription ID
+                    </p>
+                    <p className="font-mono text-sm font-semibold text-foreground">
+                      {String(detail.subscription_public_id ?? "—")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3 rounded-lg border border-border bg-card p-4">
+                  <Cash className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Payment
+                    </p>
+                    <p className="text-sm font-medium capitalize">
+                      {String(detail.payment_status ?? "—")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex gap-3 rounded-lg border border-border bg-card p-4">
+                  <Page className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Course
+                    </p>
+                    <p className="text-sm font-medium">
+                      {String(detail.course_title ?? detail.course_id ?? "—")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Plan: {String(detail.plan_name ?? detail.plan_id ?? "—")}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex gap-3 rounded-lg border border-border bg-card p-4">
+                  <User className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Student
+                    </p>
+                    <p className="text-sm font-medium">
+                      {String(detail.user_name ?? detail.user_id ?? "—")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="flex gap-2 rounded-lg border border-border bg-muted/15 p-3">
+                  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Start</p>
+                    <p className="text-sm">{String(detail.subscription_start_date ?? "—")}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 rounded-lg border border-border bg-muted/15 p-3">
+                  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">End</p>
+                    <p className="text-sm">{String(detail.subscription_end_date ?? "—")}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 rounded-lg border border-border bg-muted/15 p-3">
+                  <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Purchased</p>
+                    <p className="text-sm">{String(detail.purchase_date ?? "").slice(0, 10)}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Voucher
+                </p>
+                {typeof detail.voucher_url === "string" && detail.voucher_url.length > 0 ? (
+                  <div className="overflow-hidden rounded-xl border border-border bg-muted/10 p-2">
+                    <img
+                      src={detail.voucher_url}
+                      alt="Voucher"
+                      className="max-h-[420px] w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No voucher on file.</p>
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          {readOnly && slug === "lms-classes" && detail ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Class name</p>
+                  <p className="mt-1 text-base font-semibold">{String(detail.name ?? "—")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Type</p>
+                  <p className="mt-1 text-base font-medium capitalize">
+                    {String(detail.class_type ?? "—")}
+                  </p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-muted/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Course</p>
+                  <p className="mt-1 text-sm font-medium">{String(detail.course_name ?? "—")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Instructor</p>
+                  <p className="mt-1 text-sm font-medium">{String(detail.instructor_name ?? "—")}</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-muted/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Start</p>
+                  <p className="mt-1 text-sm">
+                    {String(detail.start_date ?? "—")} {String(detail.start_time ?? "")}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">End</p>
+                  <p className="mt-1 text-sm">
+                    {String(detail.end_date ?? "—")} {String(detail.end_time ?? "")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+
+          {readOnly && slug === "lms-class-students" && detail ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Student</p>
+                  <p className="mt-1 text-base font-semibold">
+                    {String(detail.user_name ?? `${String(detail.first_name ?? "")} ${String(detail.last_name ?? "")}`)}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-border bg-card p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Class</p>
+                  <p className="mt-1 text-base font-medium">{String(detail.class_name ?? "—")}</p>
+                </div>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-border bg-muted/15 p-3">
+                  <p className="text-xs text-muted-foreground">Grade</p>
+                  <p className="text-sm font-medium">{String(detail.grade ?? "PENDING")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/15 p-3">
+                  <p className="text-xs text-muted-foreground">Phone</p>
+                  <p className="text-sm font-medium">{String(detail.phone_number ?? "—")}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-muted/15 p-3">
+                  <p className="text-xs text-muted-foreground">National ID</p>
+                  <p className="text-sm font-medium">{String(detail.national_id ?? "—")}</p>
+                </div>
+              </div>
+              <div className="rounded-lg border border-border bg-muted/15 p-4">
+                <p className="text-xs text-muted-foreground">Note</p>
+                <p className="mt-1 whitespace-pre-wrap text-sm">{String(detail.notes ?? "—")}</p>
+              </div>
+            </div>
+          ) : null}
+
+          {readOnly &&
+          slug !== "main-categories" &&
+          slug !== "sub-categories" &&
+          slug !== "subscription-plans" &&
+          slug !== "student-subscriptions" &&
+          slug !== "lms-classes" &&
+          slug !== "lms-class-students" ? (
             <div className="space-y-4">{renderStandardFields(def.fields)}</div>
           ) : null}
+
+          {slug === "subscription-plans" && !readOnly && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cef-plan-name">
+                  Plan name <span className="text-destructive">*</span>
+                </Label>
+                <Input id="cef-plan-name" placeholder="e.g. 90-day Pro access" {...register("plan_name")} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Description</Label>
+                <Controller
+                  name="plan_description"
+                  control={control}
+                  render={({ field }) => (
+                    <RichTextEditor
+                      value={typeof field.value === "string" ? field.value : ""}
+                      onChange={(html) => field.onChange(html)}
+                      minHeight="min-h-[200px]"
+                      placeholder="What learners get with this plan…"
+                    />
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-plan-price">
+                    Price <span className="text-destructive">*</span>
+                  </Label>
+                  <Input id="cef-plan-price" type="number" step="any" {...register("price")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-plan-duration">
+                    Duration (days) <span className="text-destructive">*</span>
+                  </Label>
+                  <Input id="cef-plan-duration" type="number" {...register("duration_in_days")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-plan-type">Subscription type</Label>
+                  <select id="cef-plan-type" className={inputClass} {...register("subscription_type")}>
+                    {SUB_FREE_PAID_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>
+                        {o.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {slug === "student-subscriptions" && !readOnly && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-1">
+                <Controller
+                  name="course_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-stu-sub-course"
+                      label="Course"
+                      required
+                      options={courseOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Courses with subscription plans…"
+                      disabled={coursesWithPlansQuery.isFetching}
+                      searchPlaceholder="Search course…"
+                    />
+                  )}
+                />
+                <Controller
+                  name="user_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-stu-sub-user"
+                      label="Student (user)"
+                      required
+                      options={studentUserOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Student accounts…"
+                      disabled={mode === "edit"}
+                      searchPlaceholder="Search by name or email…"
+                    />
+                  )}
+                />
+                <Controller
+                  name="plan_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-stu-sub-plan"
+                      label="Plan"
+                      required
+                      options={planOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder={
+                        courseIdNum ? "Plans attached to this course…" : "Select a course first"
+                      }
+                      disabled={!courseIdNum || attachedPlansQuery.isFetching}
+                      searchPlaceholder="Search plan…"
+                    />
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-sub-start">Subscription start</Label>
+                  <Input id="cef-sub-start" type="date" {...register("subscription_start_date")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-sub-end">Subscription end</Label>
+                  <Input id="cef-sub-end" type="date" {...register("subscription_end_date")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-sub-purchase">Purchase date</Label>
+                  <Input id="cef-sub-purchase" type="date" {...register("purchase_date")} />
+                </div>
+              </div>
+              <ImageDropzone
+                accept="image/*,application/pdf"
+                label="Voucher"
+                hint="Upload payment proof — image or PDF"
+                value={voucherFile}
+                onSelect={setVoucherFile}
+                previewMode="square"
+              />
+            </div>
+          )}
 
           {slug === "main-categories" && (
             <>
@@ -465,9 +1075,172 @@ const CourseEntityFormDrawer = ({
             </>
           )}
 
+          {slug === "lms-classes" && !readOnly && (
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label htmlFor="cef-class-name">
+                  Name <span className="text-destructive">*</span>
+                </Label>
+                <Input id="cef-class-name" {...register("name")} placeholder="Class name" />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <Controller
+                  name="course_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-class-course"
+                      label="Course (optional)"
+                      options={lmsClassCourseOptions.map((o) => ({
+                        value: o.value,
+                        label: o.label,
+                      }))}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Select course…"
+                      disabled={courseOptionsQuery.isFetching}
+                    />
+                  )}
+                />
+                <Controller
+                  name="instructor_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-class-instructor"
+                      label="Instructor"
+                      required
+                      options={lmsClassInstructorOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Select instructor…"
+                      disabled={instructorOptionsQuery.isFetching}
+                    />
+                  )}
+                />
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-class-type">Class type</Label>
+                  <select id="cef-class-type" className={inputClass} {...register("class_type")}>
+                    <option value="online">Online</option>
+                    <option value="offline">Offline</option>
+                  </select>
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-start-date">Start date</Label>
+                  <Input id="cef-start-date" type="date" {...register("start_date")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-end-date">End date</Label>
+                  <Input id="cef-end-date" type="date" {...register("end_date")} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-start-time">Start time</Label>
+                  <Input id="cef-start-time" type="time" {...register("start_time")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-end-time">End time</Label>
+                  <Input id="cef-end-time" type="time" {...register("end_time")} />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {slug === "lms-class-students" && !readOnly && (
+            <div className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Controller
+                  name="class_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-student-class"
+                      label="Class"
+                      required
+                      options={lmsStudentClassOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Select class…"
+                      disabled={classOptionsQuery.isFetching}
+                    />
+                  )}
+                />
+                <Controller
+                  name="user_id"
+                  control={control}
+                  render={({ field }) => (
+                    <SearchableSelect
+                      id="cef-student-user"
+                      label="User (optional)"
+                      options={classStudentUserOptions}
+                      value={String(field.value ?? "")}
+                      onChange={field.onChange}
+                      placeholder="Search user…"
+                      disabled={studentUsersQuery.isFetching}
+                    />
+                  )}
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-first-name">
+                    First name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input id="cef-first-name" {...register("first_name")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-last-name">Last name</Label>
+                  <Input id="cef-last-name" {...register("last_name")} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-phone-number">Phone number</Label>
+                  <Input id="cef-phone-number" {...register("phone_number")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-national-id">National ID</Label>
+                  <Input id="cef-national-id" {...register("national_id")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-email">Email</Label>
+                  <Input id="cef-email" type="email" {...register("email")} />
+                </div>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-enrollment-date">Enrollment date</Label>
+                  <Input id="cef-enrollment-date" type="date" {...register("enrollment_date")} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cef-student-grade">Grade</Label>
+                  <select id="cef-student-grade" className={inputClass} {...register("grade")}>
+                    <option value="PENDING">Pending</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="F">F</option>
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="cef-student-note">Note</Label>
+                <textarea id="cef-student-note" className={cn(inputClass, "min-h-[96px]")} {...register("notes")} />
+              </div>
+            </div>
+          )}
+
           {slug !== "main-categories" &&
             slug !== "sub-categories" &&
             slug !== "instructors" &&
+            slug !== "subscription-plans" &&
+            slug !== "student-subscriptions" &&
+            slug !== "lms-classes" &&
+            slug !== "lms-class-students" &&
             !readOnly &&
             renderStandardFields(def.fields)}
         </DrawerBody>

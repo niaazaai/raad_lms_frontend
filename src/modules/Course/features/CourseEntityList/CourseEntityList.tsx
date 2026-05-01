@@ -27,6 +27,7 @@ import {
   DrawerContent,
   DrawerOverlay,
   PageBreadcrumb,
+  SearchableSelect,
   useConfirmDialog,
   confirmPresets,
 } from "@/components/ui";
@@ -151,6 +152,21 @@ function StatusBadge({ value }: { value: unknown }) {
   );
 }
 
+function GradeBadge({ value }: { value: unknown }) {
+  const grade = String(value ?? "PENDING").toUpperCase();
+  const tone =
+    grade === "A"
+      ? "bg-success/15 text-success"
+      : grade === "B"
+        ? "bg-primary/15 text-primary"
+        : grade === "C"
+          ? "bg-warning/20 text-warning"
+          : grade === "D" || grade === "F"
+            ? "bg-danger/15 text-danger"
+            : "bg-muted text-muted-foreground";
+  return <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", tone)}>{grade}</span>;
+}
+
 export type CourseEntityListProps = {
   /** List this entity without `:slug` in the URL (e.g. top-level `/instructors`). */
   forcedSlug?: CourseEntitySlug;
@@ -164,6 +180,9 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [filterCourseId, setFilterCourseId] = useState(searchParams.get("course_id") ?? "");
   const [filterClassId, setFilterClassId] = useState(searchParams.get("class_id") ?? "");
+  const [filterSubscriptionStatus, setFilterSubscriptionStatus] = useState(
+    searchParams.get("subscription_status") ?? ""
+  );
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [drawerMode, setDrawerMode] = useState<CourseEntityDrawerMode>("create");
   const [drawerEntityId, setDrawerEntityId] = useState<number | null>(null);
@@ -183,16 +202,49 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
     searchDebounceMs: 400,
   });
 
+  const coursesForStudentFilter = useCourseEntityList(
+    resolvedSlug === "student-subscriptions" ? "courses" : null,
+    { has_subscription_plans: 1, per_page: 200 }
+  );
+  const studentFilterCourseOptions = useMemo(() => {
+    const list = getCourseListFromResponse(coursesForStudentFilter.data);
+    return list.map((r) => ({
+      value: String(r.id),
+      label: `${String(r.title ?? "Course")} (#${r.id})`,
+    }));
+  }, [coursesForStudentFilter.data]);
+
+  const subscriptionStatusFilterOptions = useMemo(
+    () => [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+      { value: "expired", label: "Expired" },
+      { value: "cancelled", label: "Cancelled" },
+    ],
+    []
+  );
+
   const extraParams = useMemo(() => {
     const o: Record<string, string> = {};
-    if (cfg?.filterParams?.includes("course_id") && filterCourseId.trim()) {
-      o.course_id = filterCourseId.trim();
-    }
-    if (cfg?.filterParams?.includes("class_id") && filterClassId.trim()) {
-      o.class_id = filterClassId.trim();
+    if (resolvedSlug === "student-subscriptions") {
+      if (filterCourseId.trim()) o.course_id = filterCourseId.trim();
+      if (filterSubscriptionStatus.trim()) o.subscription_status = filterSubscriptionStatus.trim();
+    } else {
+      if (cfg?.filterParams?.includes("course_id") && filterCourseId.trim()) {
+        o.course_id = filterCourseId.trim();
+      }
+      if (cfg?.filterParams?.includes("class_id") && filterClassId.trim()) {
+        o.class_id = filterClassId.trim();
+      }
     }
     return o;
-  }, [cfg, filterCourseId, filterClassId]);
+  }, [
+    cfg,
+    resolvedSlug,
+    filterCourseId,
+    filterClassId,
+    filterSubscriptionStatus,
+  ]);
 
   const apiParams = {
     search: debouncedSearch || undefined,
@@ -260,8 +312,10 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
     else next.delete("course_id");
     if (filterClassId.trim()) next.set("class_id", filterClassId.trim());
     else next.delete("class_id");
+    if (filterSubscriptionStatus.trim()) next.set("subscription_status", filterSubscriptionStatus.trim());
+    else next.delete("subscription_status");
     setSearchParams(next, { replace: true });
-  }, [filterCourseId, filterClassId, searchParams, setSearchParams]);
+  }, [filterCourseId, filterClassId, filterSubscriptionStatus, searchParams, setSearchParams]);
 
   const tableConfig: DataTableConfig<CourseRow> = useMemo(() => {
     if (!cfg || !resolvedSlug || !formDef) {
@@ -281,9 +335,17 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
         key === "main_category_name"
           ? "Main category"
           : key === "user_name"
-            ? "User name"
-            : key.replace(/_/g, " "),
-      sortable: key !== "id",
+            ? resolvedSlug === "student-subscriptions"
+              ? "Student"
+              : "User name"
+            : key === "course_title"
+              ? "Course"
+              : key === "plan_name"
+                ? "Plan"
+                : key === "subscription_public_id"
+                  ? "Subscription ID"
+                  : key.replace(/_/g, " "),
+      sortable: key !== "id" && key !== "course_title" && key !== "user_name" && key !== "plan_name",
       filterable: key.includes("status"),
       filterOptions: key.includes("status") ? STATUS_FILTER_OPTIONS : undefined,
       render: (row: CourseRow) => {
@@ -303,6 +365,14 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
         }
         if (key.includes("status")) {
           return <StatusBadge value={row[key]} />;
+        }
+        if (key === "grade") {
+          return <GradeBadge value={row[key]} />;
+        }
+        if (resolvedSlug === "lms-class-students" && key === "user_name") {
+          const name = getTextOrFallback(row.user_name, "—");
+          const userId = getTextOrFallback(row.user_id, "");
+          return userId !== "—" ? `${name} (#${userId})` : name;
         }
         if (key === "thumbnail") {
           return <CategoryImageCell slug={resolvedSlug} row={row} />;
@@ -486,25 +556,16 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
     <div className="space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          {resolvedSlug === "instructors" ? (
-            <>
-              <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
-              <div className="mt-2">
-                <PageBreadcrumb
-                  items={
-                    isStandaloneInstructors
-                      ? [{ label: "Dashboard", to: "/dashboard" }, { label: cfg.title }]
-                      : [{ label: "Course", to: "/course" }, { label: cfg.title }]
-                  }
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <PageBreadcrumb items={[{ label: "Course", to: "/course" }, { label: cfg.title }]} />
-              <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
-            </>
-          )}
+          <h1 className="text-2xl font-bold tracking-tight">{cfg.title}</h1>
+          <div className="mt-2">
+            <PageBreadcrumb
+              items={
+                isStandaloneInstructors
+                  ? [{ label: "Dashboard", to: "/dashboard" }, { label: cfg.title }]
+                  : [{ label: "Course", to: "/course" }, { label: cfg.title }]
+              }
+            />
+          </div>
         </div>
         <Can permission={createPerm}>
           <Button type="button" onClick={openCreateDrawer} className="shrink-0 gap-2">
@@ -514,7 +575,7 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
         </Can>
       </div>
 
-      {(showCourseFilter || showClassFilter) && (
+      {(showCourseFilter || showClassFilter) && resolvedSlug !== "student-subscriptions" && (
         <div className="flex flex-wrap items-end gap-3">
           {showCourseFilter && (
             <div className="space-y-1">
@@ -550,6 +611,33 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
         </div>
       )}
 
+      {resolvedSlug === "student-subscriptions" && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-end">
+          <div className="grid w-full gap-3 sm:max-w-xl sm:grid-cols-2">
+            <SearchableSelect
+              id="stu-sub-filter-course"
+              label="Course"
+              options={[{ value: "", label: "All courses" }, ...studentFilterCourseOptions]}
+              value={filterCourseId}
+              onChange={(v) => setFilterCourseId(v)}
+              placeholder="Filter by course…"
+              disabled={coursesForStudentFilter.isFetching}
+            />
+            <SearchableSelect
+              id="stu-sub-filter-status"
+              label="Subscription status"
+              options={[{ value: "", label: "All statuses" }, ...subscriptionStatusFilterOptions]}
+              value={filterSubscriptionStatus}
+              onChange={(v) => setFilterSubscriptionStatus(v)}
+              placeholder="Status…"
+            />
+          </div>
+          <Button type="button" variant="secondary" size="sm" onClick={applyFiltersToUrl}>
+            Apply filters
+          </Button>
+        </div>
+      )}
+
       <DataTable<CourseRow>
         data={rows}
         config={tableConfig}
@@ -567,7 +655,13 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
 
       <Drawer open={drawerOpen} onClose={closeDrawer}>
         <DrawerOverlay />
-        <DrawerContent>
+        <DrawerContent
+          className={
+            resolvedSlug === "student-subscriptions"
+              ? "w-[min(920px,96vw)] min-w-[300px]"
+              : undefined
+          }
+        >
           <CourseEntityFormDrawer
             slug={resolvedSlug}
             entityTitle={cfg.title}

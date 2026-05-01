@@ -8,9 +8,7 @@ export type CourseEntitySlug =
   | "downloadable-resources"
   | "quiz-files"
   | "student-discounts"
-  | "certificates"
   | "subscription-plans"
-  | "course-subscriptions"
   | "student-subscriptions"
   | "instructors"
   | "lms-classes"
@@ -117,60 +115,30 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
     columns: ["id", "course_id", "user_id", "discount_type", "discount_status", "created_at"],
     filterParams: ["course_id"],
   },
-  certificates: {
-    slug: "certificates",
-    title: "Certificates",
-    pageDescription:
-      "Issue verifiable ACCA completion records—track public IDs, signatures, and issue dates in one place.",
-    apiPath: "/certificates",
-    permission: "course.certificates.read",
-    columns: ["id", "course_id", "user_id", "status", "issue_date", "certificate_public_id"],
-    filterParams: ["course_id"],
-  },
   "subscription-plans": {
     slug: "subscription-plans",
     title: "Subscription plans",
     pageDescription:
-      "Define free vs paid access windows—duration, price, and plan copy that matches your ACCA offerings.",
+      "Reusable billing templates—name, describe, and price plans, then attach up to three to each course from the course wizard.",
     apiPath: "/subscription-plans",
     permission: "course.subscription_plans.read",
-    columns: [
-      "id",
-      "course_id",
-      "plan_name",
-      "price",
-      "duration_in_days",
-      "subscription_type",
-      "status",
-    ],
-    filterParams: ["course_id"],
-  },
-  "course-subscriptions": {
-    slug: "course-subscriptions",
-    title: "Course subscriptions",
-    pageDescription:
-      "Catalog entries that pair each course with a sellable plan—control what appears in checkout flows.",
-    apiPath: "/course-subscriptions",
-    permission: "course.subscriptions.read",
-    columns: ["id", "course_id", "plan_id", "subscription_status", "created_at"],
-    filterParams: ["course_id"],
+    columns: ["id", "plan_name", "price", "duration_in_days", "subscription_type", "status"],
   },
   "student-subscriptions": {
     slug: "student-subscriptions",
     title: "Student subscriptions",
     pageDescription:
-      "Learner entitlements with dates, payment proof, and approvals—your ledger for who can access what.",
+      "Learner entitlements with dates, payment proof, and plan linkage—your ledger for who can access what.",
     apiPath: "/student-subscriptions",
     permission: "course.student_subscriptions.read",
     columns: [
-      "id",
-      "course_id",
-      "user_id",
+      "subscription_public_id",
+      "course_title",
+      "user_name",
+      "plan_name",
       "subscription_status",
-      "payment_status",
       "purchase_date",
     ],
-    filterParams: ["course_id"],
   },
   instructors: {
     slug: "instructors",
@@ -188,18 +156,16 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Schedule live or on-demand cohorts—dates, instructors, and status for every ACCA class instance.",
     apiPath: "/lms-classes",
     permission: "course.lms_classes.read",
-    columns: ["id", "name", "course_id", "instructor_id", "class_type", "status", "start_date"],
-    filterParams: ["course_id"],
+    columns: ["id", "name", "course_name", "instructor_name", "class_type", "start_date", "end_date"],
   },
   "lms-class-students": {
     slug: "lms-class-students",
     title: "Class students",
     pageDescription:
       "Roster, grades, and feedback per cohort—close the loop from enrollment to instructor sign-off.",
-    apiPath: "/lms-class-students",
+    apiPath: "/students",
     permission: "course.class_students.read",
-    columns: ["id", "class_id", "user_id", "status", "grade", "enrollment_date"],
-    filterParams: ["class_id"],
+    columns: ["id", "class_name", "user_name", "grade", "enrollment_date", "phone_number"],
   },
 };
 

@@ -9,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import {
   Attachment,
   Check,
+  CreditCard,
   EditPencil,
   Folder,
   Page,
@@ -83,6 +84,13 @@ const COURSE_DETAIL_FLAG_LABELS: Record<CourseDetailFlagField, string> = {
 /** Radix Select cannot use empty string — optional numeric FKs use this sentinel */
 const SELECT_NONE_VALUE = "__none__";
 
+function stripHtmlToText(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const courseLanguageSchema = z.enum(["PASHTOO", "DARI", "ENGLISH"]);
 const courseLevelSchema = z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]);
 
@@ -125,6 +133,11 @@ const steps: StepConfig[] = [
     id: "details",
     title: "Course details",
     hint: "Title, media, pricing",
+  },
+  {
+    id: "subscriptions",
+    title: "Subscription plans",
+    hint: "Attach up to three plans",
   },
   {
     id: "lessons",
@@ -332,6 +345,8 @@ function VerticalCourseStepper({
         return <PageEdit className={ic} strokeWidth={1.5} aria-hidden />;
       case "lessons":
         return <Play className={ic} strokeWidth={1.5} aria-hidden />;
+      case "subscriptions":
+        return <CreditCard className={ic} strokeWidth={1.5} aria-hidden />;
       case "resources":
         return <Attachment className={ic} strokeWidth={1.5} aria-hidden />;
       case "quiz":
@@ -484,6 +499,12 @@ const CourseWizardPage = () => {
     effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 200 } : undefined,
     { enabled: effectiveCourseId != null }
   );
+  const [selectedSubscriptionPlanIds, setSelectedSubscriptionPlanIds] = useState<number[]>([]);
+
+  const subscriptionPlansCatalog = useCourseEntityList("subscription-plans", {
+    per_page: 100,
+    status: "active",
+  });
   const quizListQuery = useCourseEntityList(
     effectiveCourseId != null ? "quiz-files" : null,
     effectiveCourseId != null ? { course_id: effectiveCourseId, per_page: 200 } : undefined,
@@ -640,6 +661,14 @@ const CourseWizardPage = () => {
     setValue("is_free", Boolean(detail.is_free));
     setThumbnailFile(null);
     setBannerFile(null);
+    const planIdsRaw = detail.subscription_plan_ids;
+    if (Array.isArray(planIdsRaw)) {
+      setSelectedSubscriptionPlanIds(
+        planIdsRaw.map((x) => Number(x)).filter((n) => Number.isFinite(n) && n > 0)
+      );
+    } else {
+      setSelectedSubscriptionPlanIds([]);
+    }
   }, [detailQuery.data, setValue]);
 
   const watchedValues = watch();
@@ -694,6 +723,7 @@ const CourseWizardPage = () => {
       is_best_seller: values.is_best_seller,
       is_free: values.is_free,
       status: "active",
+      subscription_plan_ids: selectedSubscriptionPlanIds,
     };
 
     if (thumbnailFile) {
@@ -744,6 +774,7 @@ const CourseWizardPage = () => {
       is_best_seller: values.is_best_seller,
       is_free: values.is_free,
       status: "active",
+      subscription_plan_ids: selectedSubscriptionPlanIds,
     };
     if (thumbnailFile) payload.thumbnail_file = thumbnailFile;
     else payload.thumbnail = values.thumbnail ?? "";
@@ -767,6 +798,21 @@ const CourseWizardPage = () => {
     try {
       if (currentStep === 1 && !viewMode) {
         await ensureCoursePersisted();
+      }
+      if (currentStep === 2 && !viewMode) {
+        const cid = editId ?? draftCourseId ?? effectiveCourseId;
+        if (cid != null && !Number.isNaN(cid)) {
+          await updateMutation.mutateAsync({
+            id: cid,
+            body: { subscription_plan_ids: selectedSubscriptionPlanIds },
+          });
+          await queryClient.invalidateQueries({ queryKey: ["course", "entity", "courses"] });
+          if (editId != null) {
+            await queryClient.invalidateQueries({
+              queryKey: ["course", "entity", "courses", "detail", editId],
+            });
+          }
+        }
       }
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     } catch {
@@ -849,6 +895,20 @@ const CourseWizardPage = () => {
     () => getCourseListFromResponse(resourcesListQuery.data),
     [resourcesListQuery.data]
   );
+  const planCatalogRows = useMemo(
+    () => getCourseListFromResponse(subscriptionPlansCatalog.data),
+    [subscriptionPlansCatalog.data]
+  );
+
+  const toggleSubscriptionPlanSelection = (planId: number) => {
+    if (viewMode) return;
+    setSelectedSubscriptionPlanIds((prev) => {
+      if (prev.includes(planId)) return prev.filter((id) => id !== planId);
+      if (prev.length >= 3) return prev;
+      return [...prev, planId];
+    });
+  };
+
   const quizRowsList = useMemo(
     () => getCourseListFromResponse(quizListQuery.data),
     [quizListQuery.data]
@@ -859,6 +919,7 @@ const CourseWizardPage = () => {
     numId(watchedValues.course_main_category_id) > 0 &&
       numId(watchedValues.course_sub_category_id) > 0,
     String(watchedValues.title ?? "").trim().length > 0,
+    currentStep > 2 || selectedSubscriptionPlanIds.length > 0,
     modulesRowsStep.length >= 1 && lessonsRowsStep.length >= 1,
     resourcesRows.length >= 1,
     quizRowsList.length >= 1,
@@ -1334,6 +1395,100 @@ const CourseWizardPage = () => {
 
           {currentStep === 2 && effectiveCourseId != null && (
             <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Subscription plans</h3>
+                <p className="text-sm text-muted-foreground">
+                  Pick up to three existing plans learners can use for this course. Details are loaded from
+                  your catalog.
+                </p>
+              </div>
+              {subscriptionPlansCatalog.isFetching ? (
+                <div className="flex justify-center py-12">
+                  <Spinner className="h-8 w-8" />
+                </div>
+              ) : planCatalogRows.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+                  No active subscription plans yet. Create them under{" "}
+                  <span className="font-medium text-foreground">Subscription plans</span>, then return
+                  here.
+                </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {planCatalogRows.map((row) => {
+                    const pid = Number(row.id);
+                    const selected = selectedSubscriptionPlanIds.includes(pid);
+                    const atMax = selectedSubscriptionPlanIds.length >= 3 && !selected;
+                    const name = String(row.plan_name ?? "");
+                    const plain = stripHtmlToText(String(row.plan_description ?? ""));
+                    const excerpt =
+                      plain.length > 160 ? `${plain.slice(0, 160)}…` : plain || "No description";
+                    const price = row.price != null && row.price !== "" ? String(row.price) : "—";
+                    const duration =
+                      row.duration_in_days != null && Number(row.duration_in_days) > 0
+                        ? `${row.duration_in_days} days`
+                        : "—";
+                    const subType = String(row.subscription_type ?? "—");
+                    return (
+                      <button
+                        key={pid}
+                        type="button"
+                        disabled={viewMode || atMax}
+                        onClick={() => toggleSubscriptionPlanSelection(pid)}
+                        className={cn(
+                          "relative flex flex-col rounded-lg border bg-card p-4 text-left shadow-sm transition-all",
+                          selected
+                            ? "border-primary ring-2 ring-primary/30"
+                            : "border-border hover:border-primary/40",
+                          (viewMode || atMax) && !selected && "cursor-not-allowed opacity-50"
+                        )}
+                      >
+                        {selected ? (
+                          <span
+                            className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-primary text-white"
+                            aria-hidden
+                          >
+                            <Check className="h-4 w-4" strokeWidth={2.5} />
+                          </span>
+                        ) : null}
+                        <p className="pr-10 font-semibold text-foreground">{name}</p>
+                        <p className="mt-2 line-clamp-3 text-xs text-muted-foreground">{excerpt}</p>
+                        <dl className="mt-4 grid grid-cols-3 gap-2 border-t border-border pt-3 text-xs">
+                          <div>
+                            <dt className="text-muted-foreground">Price</dt>
+                            <dd className="font-medium text-foreground">{price}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Duration</dt>
+                            <dd className="font-medium text-foreground">{duration}</dd>
+                          </div>
+                          <div>
+                            <dt className="text-muted-foreground">Type</dt>
+                            <dd className="font-medium capitalize text-foreground">{subType}</dd>
+                          </div>
+                        </dl>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              {!viewMode ? (
+                <p className="text-xs text-muted-foreground">
+                  {selectedSubscriptionPlanIds.length} of 3 selected — selections are saved when you click
+                  Next.
+                </p>
+              ) : null}
+            </div>
+          )}
+
+          {currentStep === 2 && effectiveCourseId == null && (
+            <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
+              Save <span className="font-medium text-foreground">Course details</span> first (click Next on
+              that step), then you can attach subscription plans here.
+            </div>
+          )}
+
+          {currentStep === 3 && effectiveCourseId != null && (
+            <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">Lessons</h3>
@@ -1566,14 +1721,14 @@ const CourseWizardPage = () => {
             </div>
           )}
 
-          {currentStep === 2 && effectiveCourseId == null && (
+          {currentStep === 3 && effectiveCourseId == null && (
             <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               Save <span className="font-medium text-foreground">Course details</span> first (click
               Next on that step), then you can add modules and lessons here.
             </div>
           )}
 
-          {currentStep === 3 && effectiveCourseId != null && (
+          {currentStep === 4 && effectiveCourseId != null && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -1773,14 +1928,14 @@ const CourseWizardPage = () => {
             </div>
           )}
 
-          {currentStep === 3 && effectiveCourseId == null && (
+          {currentStep === 4 && effectiveCourseId == null && (
             <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               Save <span className="font-medium text-foreground">Course details</span> first to manage
               downloadable resources.
             </div>
           )}
 
-          {currentStep === 4 && effectiveCourseId != null && (
+          {currentStep === 5 && effectiveCourseId != null && (
             <div className="space-y-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -1974,7 +2129,7 @@ const CourseWizardPage = () => {
             </div>
           )}
 
-          {currentStep === 4 && effectiveCourseId == null && (
+          {currentStep === 5 && effectiveCourseId == null && (
             <div className="rounded-lg border border-dashed border-border px-4 py-10 text-center text-sm text-muted-foreground">
               Save <span className="font-medium text-foreground">Course details</span> first to manage quiz
               files.

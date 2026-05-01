@@ -15,9 +15,7 @@ export const COURSE_SIDEBAR_ORDER: CourseEntitySlug[] = [
   "courses",
   "student-discounts",
   "subscription-plans",
-  "course-subscriptions",
   "student-subscriptions",
-  "certificates",
   "lms-classes",
   "lms-class-students",
 ];
