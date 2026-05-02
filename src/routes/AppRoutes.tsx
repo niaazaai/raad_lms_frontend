@@ -11,6 +11,9 @@ const VerifyEmailPage = lazy(() => import("@/pages/auth/VerifyEmail"));
 const VerifyEmailSuccessPage = lazy(() => import("@/pages/auth/VerifyEmailSuccess"));
 const VerifyEmailExpiredPage = lazy(() => import("@/pages/auth/VerifyEmailExpired"));
 
+const LandingPage = lazy(() => import("@/pages/LandingPage"));
+const ExploreCoursesPage = lazy(() => import("@/pages/ExploreCoursesPage"));
+
 // Error pages
 const NotFoundPage = lazy(() => import("@/pages/errors/NotFound"));
 const UnauthorizedPage = lazy(() => import("@/pages/errors/Unauthorized"));
@@ -94,8 +97,25 @@ const AppRoutes = () => {
         }
       />
 
+      <Route
+        path="/"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <LandingPage />
+          </Suspense>
+        }
+      />
+
+      <Route
+        path="/explore-courses"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <ExploreCoursesPage />
+          </Suspense>
+        }
+      />
+
       {/* Redirects */}
-      <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/home" element={<Navigate to="/dashboard" replace />} />
 
       {/* Error Pages */}
