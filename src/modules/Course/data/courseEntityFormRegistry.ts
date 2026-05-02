@@ -267,6 +267,7 @@ export const COURSE_ENTITY_FORM_REGISTRY: Record<CourseEntitySlug, CourseEntityF
       { name: "grade", label: "Grade", type: "select", options: GRADE_OPTS },
       { name: "notes", label: "Note", type: "textarea" },
     ],
+    statusToggle: { field: "status", activeValue: "active", inactiveValue: "inactive" },
   },
 };
 
@@ -319,6 +320,7 @@ export function getCreateDefaultsForEntity(
     case "lms-class-students":
       out.enrollment_date = today;
       out.grade = "PENDING";
+      out.status = "active";
       break;
     default:
       break;

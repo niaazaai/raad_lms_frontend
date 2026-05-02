@@ -19,16 +19,6 @@ const NotificationBadgeCount = () => {
   );
 };
 
-/**
- * Header Component
- *
- * Top navigation bar with:
- * - Mobile menu toggle
- * - Search
- * - Notifications
- * - User menu
- * - Theme toggle
- */
 const Header = () => {
   const { sidebarCollapsed, toggleSidebar, theme, setTheme, setMobileMenuOpen } = useLayoutStore();
   const { user, logout, fetchUser } = useAuth();

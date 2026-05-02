@@ -713,6 +713,21 @@ Use `useCourseEntityList`, `useCourseEntityDetail`, `useCreateCourseEntity`, `us
 
 **Course catalog view** (`CourseViewPage.tsx`): Udemy-inspired layout—not the same route as edit. Long description may contain HTML from the rich-text editor; treat XSS if content becomes student-facing publicly. **Lesson playback:** clicking a lesson with `video_status` ready opens a **Drawer**; video uses **`LessonVideoPlayer`** with **`hls.js`** for `.m3u8` / API-relative HLS URLs (Vite `/api` proxy + Sanctum cookies) or native HLS on Safari; progressive MP4 uses `<video src>`. Prefer **`GET /lessons/:id/playback`** (`useLessonPlayback.ts`) for a fresh payload (`type`, `src`) rather than stale list data alone.
 
+### LMS classes + class students (current behavior)
+
+- **LMS classes (`/course/lms-classes`)**
+  - List uses relation fields (`course_name`, `instructor_name`) instead of raw IDs.
+  - `class_type` is rendered as badges (`online` = green, `offline` = blue).
+  - Create/edit drawer uses searchable selects for optional course and required instructor; class name can auto-fill from selected course title.
+  - View drawer shows richer cards with icons and separated schedule blocks (human-readable date + normalized `YYYY-MM-DD`; time in `HH:mm:ss`).
+- **Class students (`/course/lms-class-students`)**
+  - Frontend slug remains `lms-class-students`, but API path is `/students`.
+  - Create/edit supports hybrid enrollment (online/offline): required class select, optional user select, manual profile fields, optional profile picture upload, grade + note.
+  - Students can appear in multiple classes; do not enforce unique `user_id` in client assumptions.
+  - View drawer includes profile picture, full profile details, status, and classes-taken summary when provided by API.
+- **UI/layout notes**
+  - Drawer forms for these entities are `flex` + `min-h-0` layouts so body scroll and footer actions remain stable with large searchable dropdown content.
+
 ---
 
 ## Adding a New Feature Module (Checklist)

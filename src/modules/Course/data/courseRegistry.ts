@@ -165,7 +165,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "Roster, grades, and feedback per cohort—close the loop from enrollment to instructor sign-off.",
     apiPath: "/students",
     permission: "course.class_students.read",
-    columns: ["id", "class_name", "user_name", "grade", "enrollment_date", "phone_number"],
+    columns: ["id", "class_name", "user_name", "grade", "status", "enrollment_date", "phone_number"],
   },
 };
 

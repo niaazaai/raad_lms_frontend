@@ -167,6 +167,22 @@ function GradeBadge({ value }: { value: unknown }) {
   return <span className={cn("inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold", tone)}>{grade}</span>;
 }
 
+function ClassTypeBadge({ value }: { value: unknown }) {
+  const type = String(value ?? "").toLowerCase();
+  const isOnline = type === "online";
+  const label = isOnline ? "Online" : type === "offline" ? "Offline" : "—";
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-full px-2.5 py-0.5 text-xs font-semibold",
+        isOnline ? "bg-success/15 text-success" : "bg-info/15 text-info"
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
 export type CourseEntityListProps = {
   /** List this entity without `:slug` in the URL (e.g. top-level `/instructors`). */
   forcedSlug?: CourseEntitySlug;
@@ -365,6 +381,9 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
         }
         if (key.includes("status")) {
           return <StatusBadge value={row[key]} />;
+        }
+        if (key === "class_type") {
+          return <ClassTypeBadge value={row[key]} />;
         }
         if (key === "grade") {
           return <GradeBadge value={row[key]} />;
