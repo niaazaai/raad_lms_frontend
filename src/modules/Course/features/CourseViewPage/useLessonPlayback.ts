@@ -1,4 +1,4 @@
-import { useQueryApi } from "@/hooks";
+import { useQueryApi } from "@/hooks/common/useQueryApi";
 
 export type LessonPlaybackPayload = {
   type: "hls" | "progressive";

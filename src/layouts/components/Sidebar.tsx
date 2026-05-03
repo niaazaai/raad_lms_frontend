@@ -12,6 +12,7 @@ import {
   Community,
   PageSearch,
   Hat,
+  GraduationCap,
 } from "iconoir-react";
 import { useLayoutStore } from "@/store";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,13 @@ interface NavItem {
 }
 
 function linkIsActive(pathname: string, itemPath: string): boolean {
+  if (itemPath === "/student") {
+    return (
+      pathname === "/student" ||
+      pathname.startsWith("/student/") ||
+      pathname.startsWith("/learn/course")
+    );
+  }
   if (itemPath === "/course") {
     return pathname === "/course";
   }
@@ -118,7 +126,7 @@ const baseNavItems: NavItem[] = [
 
 const Sidebar = () => {
   const { sidebarCollapsed, mobileMenuOpen, setMobileMenuOpen } = useLayoutStore();
-  const { hasPermission, hasAnyPermission, hasAnyRole } = useAuth();
+  const { hasPermission, hasAnyPermission, hasAnyRole, user } = useAuth();
   const location = useLocation();
   const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
 
@@ -130,6 +138,15 @@ const Sidebar = () => {
   const navItems: NavItem[] = useMemo(
     () => [
       baseNavItems[0],
+      ...(user?.type === "student"
+        ? [
+            {
+              title: "My learning",
+              path: "/student",
+              icon: <GraduationCap className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" />,
+            },
+          ]
+        : []),
       {
         title: "Courses",
         icon: <BookStack className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" />,
@@ -145,7 +162,7 @@ const Sidebar = () => {
       },
       ...baseNavItems.slice(1),
     ],
-    [courseNavChildren]
+    [courseNavChildren, user?.type]
   );
 
   const isChildActive = (children?: NavItem[]) => {

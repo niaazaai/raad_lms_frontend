@@ -1,98 +1,123 @@
 import { useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { EditPencil, NavArrowLeft, Play } from "iconoir-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  BookStack,
+  CheckCircle,
+  EditPencil,
+  Language,
+  Medal,
+  NavArrowLeft,
+  NavArrowRight,
+  Page,
+  Play,
+  ShoppingBag,
+  User,
+} from "iconoir-react";
 import {
   Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
   Drawer,
   DrawerBody,
   DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
   DrawerHeader,
   DrawerOverlay,
   DrawerTitle,
-  Spinner,
 } from "@/components/ui";
-import { Can } from "@/features/auth";
+import { Spinner } from "@/components/ui/spinner";
+import { Can, useAuth } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import {
-  getCourseEntityDetailFromResponse,
-  getCourseListFromResponse,
-  useCourseEntityDetail,
-  useCourseEntityList,
-  type CourseRow,
-} from "../../hooks/useCourseEntity";
+  getPublicCourseDetailFromResponse,
+  getPreviewPlaybackFromResponse,
+  usePublicCourseDetail,
+  usePublicCoursePreviewPlayback,
+} from "@/hooks/usePublicCourses";
+import type { PublicSubscriptionPlan } from "@/hooks/usePublicCourses";
 import LessonVideoPlayer from "./LessonVideoPlayer";
-import { useLessonPlayback } from "./useLessonPlayback";
 
-function lessonRowPlayable(row: CourseRow): boolean {
-  const url = row.primary_video_url;
-  const status = String(row.video_status ?? "");
-  if (typeof url !== "string" || url.length === 0) return false;
-  if (status === "uploading" || status === "processing") return false;
-  if (status === "failed") return false;
-  return true;
+function formatMoney(amount: string | null | undefined): string {
+  if (amount == null || String(amount).trim() === "") return "—";
+  const n = Number.parseFloat(String(amount));
+  if (Number.isNaN(n)) return String(amount);
+  return new Intl.NumberFormat(undefined, { style: "currency", currency: "USD" }).format(n);
 }
 
-function lessonPlaybackHint(row: CourseRow): string | undefined {
-  const status = String(row.video_status ?? "");
-  if (typeof row.primary_video_url === "string" && row.primary_video_url.length > 0) return undefined;
-  if (status === "processing" || status === "uploading") return "Processing video…";
-  if (status === "failed") return "Video failed — try re-upload from the editor.";
-  return "No video yet";
+/** API may send strings or numbers (e.g. decimal duration). */
+function formatOptionalDisplay(value: unknown): string {
+  if (value == null) return "—";
+  const s = String(value).trim();
+  return s === "" ? "—" : s;
+}
+
+function looksLikeHtml(text: string): boolean {
+  return /<[a-z][\s\S]*>/i.test(text);
 }
 
 const CourseViewPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { courseId } = useParams<{ courseId: string }>();
   const id = courseId ? Number(courseId) : NaN;
   const validId = !Number.isNaN(id) ? id : null;
 
-  const detailQuery = useCourseEntityDetail("courses", validId, { enabled: validId != null });
-  const modulesQuery = useCourseEntityList(
-    validId != null ? "course-faasls" : null,
-    validId != null ? { course_id: validId, per_page: 200 } : undefined,
-    { enabled: validId != null }
-  );
-  const lessonsQuery = useCourseEntityList(
-    validId != null ? "lessons" : null,
-    validId != null ? { course_id: validId, per_page: 500 } : undefined,
-    { enabled: validId != null }
+  const detailQuery = usePublicCourseDetail(validId, { enabled: validId != null });
+  const previewQuery = usePublicCoursePreviewPlayback(validId, { enabled: validId != null });
+
+  const payload = useMemo(
+    () => getPublicCourseDetailFromResponse(detailQuery.data),
+    [detailQuery.data],
   );
 
-  const course = getCourseEntityDetailFromResponse(detailQuery.data);
-  const modules = useMemo(
-    () => getCourseListFromResponse(modulesQuery.data),
-    [modulesQuery.data]
-  );
-  const lessons = useMemo(
-    () => getCourseListFromResponse(lessonsQuery.data),
-    [lessonsQuery.data]
+  const previewPlayback = useMemo(
+    () => getPreviewPlaybackFromResponse(previewQuery.data),
+    [previewQuery.data],
   );
 
-  const [lessonPlayerId, setLessonPlayerId] = useState<number | null>(null);
-  const [lessonDrawerOpen, setLessonDrawerOpen] = useState(false);
-  const playbackQuery = useLessonPlayback(lessonPlayerId, lessonDrawerOpen && lessonPlayerId != null);
+  const course = payload;
+  const modules = course?.modules ?? [];
+  const plans: PublicSubscriptionPlan[] = course?.subscription_plans ?? [];
 
-  const loading =
-    validId == null ||
-    detailQuery.isLoading ||
-    modulesQuery.isLoading ||
-    lessonsQuery.isLoading;
+  const loading = validId == null || detailQuery.isLoading;
+  const isError = detailQuery.isError || (!loading && !course);
+
+  const backHref = user ? "/course/courses" : "/explore-courses";
+  const backLabel = user ? "Courses" : "Catalog";
+
+  const [plansOpen, setPlansOpen] = useState(false);
+
+  const loginHref = `/login?redirect=${encodeURIComponent(`/course/courses/${validId ?? 0}/view`)}`;
 
   if (validId == null) {
     return (
       <div className="space-y-4 p-6">
         <p className="text-sm text-muted-foreground">Invalid course.</p>
-        <Button type="button" variant="outline" onClick={() => navigate("/course/courses")}>
-          Back to courses
+        <Button type="button" variant="outline" onClick={() => navigate(backHref)}>
+          {backLabel}
         </Button>
       </div>
     );
   }
 
-  if (loading || !course) {
+  if (loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center p-6">
         <Spinner className="h-10 w-10 text-primary" />
+      </div>
+    );
+  }
+
+  if (isError || !course) {
+    return (
+      <div className="space-y-4 p-6">
+        <p className="text-sm text-muted-foreground">Course not found or not available.</p>
+        <Button type="button" variant="outline" onClick={() => navigate(backHref)}>
+          {backLabel}
+        </Button>
       </div>
     );
   }
@@ -109,9 +134,6 @@ const CourseViewPage = () => {
   const level = String(course.level ?? "—");
   const price = course.price != null ? String(course.price) : "—";
 
-  const lessonsByModule = (mid: number) =>
-    lessons.filter((row) => Number(row.course_module_id) === mid);
-
   const flagBadges: { key: string; label: string }[] = [];
   if (course.is_featured) flagBadges.push({ key: "featured", label: "Featured" });
   if (course.is_popular) flagBadges.push({ key: "popular", label: "Popular" });
@@ -119,71 +141,121 @@ const CourseViewPage = () => {
   if (course.is_best_seller) flagBadges.push({ key: "bestseller", label: "Best seller" });
   if (course.is_free) flagBadges.push({ key: "free", label: "Free" });
 
-  const drawerLesson =
-    lessonPlayerId != null
-      ? lessons.find((l) => Number(l.id) === lessonPlayerId)
-      : undefined;
+  const showPreviewPlayer =
+    previewPlayback &&
+    previewPlayback.src &&
+    previewPlayback.src.length > 0 &&
+    previewPlayback.lesson_id != null;
 
   return (
-    <div className="min-h-0 pb-10">
+    <div className="min-h-0 bg-background pb-12">
       <div className="border-b border-border bg-card">
-        <div
-          className={cn(
-            "relative h-44 w-full overflow-hidden bg-muted md:h-56",
-            bannerUrl && "bg-center bg-cover"
-          )}
-          style={bannerUrl ? { backgroundImage: `url(${bannerUrl})` } : undefined}
-        >
+        <div className="relative h-44 w-full overflow-hidden bg-muted sm:h-52 md:h-60 lg:h-64">
+          {bannerUrl ? (
+            <img
+              src={bannerUrl}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              loading="eager"
+              decoding="async"
+            />
+          ) : null}
           <div
             className={cn(
-              "absolute inset-0 bg-gradient-to-t from-background/95 via-background/40 to-transparent",
-              !bannerUrl && "from-background via-background"
+              "absolute inset-0 bg-gradient-to-t from-background via-background/75 to-transparent",
+              !bannerUrl && "from-background via-background",
             )}
           />
-          <div className="relative mx-auto flex max-w-5xl flex-col gap-3 px-4 pb-6 pt-4 md:flex-row md:items-end md:justify-between md:px-6">
-            <div className="flex min-w-0 flex-1 gap-4">
+          <div className="relative mx-auto flex max-w-6xl flex-col gap-4 px-4 pb-6 pt-5 sm:flex-row sm:items-end sm:justify-between sm:pb-8 sm:pt-6 md:px-6">
+            <div className="flex min-w-0 flex-1 gap-3 sm:gap-4">
               {thumbUrl ? (
                 <img
                   src={thumbUrl}
                   alt=""
-                  className="hidden h-28 w-28 shrink-0 rounded-lg border border-border object-cover shadow-sm sm:block md:h-32 md:w-32"
+                  className="h-24 w-24 shrink-0 rounded-xl border-2 border-background object-cover shadow-lg ring-1 ring-border sm:h-28 sm:w-28 md:h-36 md:w-36"
+                  loading="eager"
+                  decoding="async"
                 />
               ) : (
-                <div className="hidden h-28 w-28 shrink-0 rounded-lg border border-border bg-primary/10 sm:flex md:h-32 md:w-32" />
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-xl border-2 border-border bg-primary/10 sm:h-28 sm:w-28 md:h-36 md:w-36">
+                  <BookStack className="h-10 w-10 text-primary/60 md:h-14 md:w-14" />
+                </div>
               )}
               <div className="min-w-0">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
                   {flagBadges.map((b) => (
                     <span
                       key={b.key}
-                      className="rounded-md border border-border bg-background/80 px-2 py-0.5 text-[11px] font-medium text-foreground backdrop-blur-sm"
+                      className="rounded-md border border-border bg-background/95 px-2 py-0.5 text-[11px] font-medium text-foreground shadow-sm backdrop-blur-sm"
                     >
                       {b.label}
                     </span>
                   ))}
                 </div>
-                <h1 className="text-2xl font-bold tracking-tight text-foreground md:text-3xl">
+                <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl md:text-3xl lg:text-4xl">
                   {title}
                 </h1>
-                <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-                  {shortDesc || "No short description."}
-                </p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  {language} · {level}
-                  {price !== "—" ? ` · ${price}` : null}
-                </p>
+                <p className="mt-2 max-w-3xl text-sm text-muted-foreground sm:text-base">{shortDesc || "—"}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-xs text-muted-foreground sm:text-sm">
+                  <span className="inline-flex items-center gap-1.5">
+                    <Language className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    {language}
+                  </span>
+                  <span className="text-border" aria-hidden>
+                    |
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Medal className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    {level}
+                  </span>
+                  {course.main_category?.title ? (
+                    <>
+                      <span className="text-border" aria-hidden>
+                        |
+                      </span>
+                      <span>{course.main_category.title}</span>
+                    </>
+                  ) : null}
+                  {course.sub_category?.title ? (
+                    <>
+                      <span className="text-border" aria-hidden>
+                        |
+                      </span>
+                      <span>{course.sub_category.title}</span>
+                    </>
+                  ) : null}
+                  {course.instructor?.name ? (
+                    <>
+                      <span className="text-border" aria-hidden>
+                        |
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <User className="h-3.5 w-3.5 shrink-0 text-primary" />
+                        {course.instructor.name}
+                      </span>
+                    </>
+                  ) : null}
+                  {price !== "—" ? (
+                    <>
+                      <span className="text-border" aria-hidden>
+                        |
+                      </span>
+                      <span className="font-medium text-foreground">{formatMoney(price)}</span>
+                    </>
+                  ) : null}
+                </div>
               </div>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2 md:justify-end">
+            <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 className="gap-2"
-                onClick={() => navigate("/course/courses")}
+                onClick={() => navigate(backHref)}
               >
                 <NavArrowLeft className="h-4 w-4" />
-                Courses
+                {backLabel}
               </Button>
               <Can permission="course.courses.update">
                 <Button
@@ -201,186 +273,220 @@ const CourseViewPage = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-5xl gap-8 px-4 py-8 md:grid-cols-[minmax(0,1fr)_320px] md:px-6">
-        <div className="min-w-0 space-y-8">
-          {longDesc ? (
-            <section className="space-y-2">
-              <h2 className="text-lg font-semibold text-foreground">About this course</h2>
-              {longDesc.includes("<") ? (
-                <div
-                  className="prose-custom max-w-none text-sm text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: longDesc }}
+      <div className="mx-auto max-w-6xl px-4 py-8 md:px-6">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:items-start">
+          <div className="min-w-0 space-y-10">
+            {previewQuery.isLoading ? (
+              <div className="flex justify-center py-10">
+                <Spinner className="h-8 w-8 text-primary" />
+              </div>
+            ) : showPreviewPlayer ? (
+              <section className="space-y-3 rounded-xl border border-border bg-card/50 p-4 shadow-sm sm:p-6">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <Play className="h-5 w-5 shrink-0 text-primary" />
+                  Course preview
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Introductory clip. Full lessons unlock after you enroll.
+                </p>
+                <LessonVideoPlayer
+                  src={previewPlayback.src}
+                  playbackType={previewPlayback.type === "hls" ? "hls" : "progressive"}
+                  className="w-full max-w-full"
                 />
-              ) : (
-                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{longDesc}</p>
-              )}
-            </section>
-          ) : null}
-          {prerequisites ? (
-            <section className="space-y-2">
-              <h2 className="text-lg font-semibold text-foreground">Prerequisites</h2>
-              <p className="whitespace-pre-wrap text-sm text-muted-foreground">{prerequisites}</p>
-            </section>
-          ) : null}
+              </section>
+            ) : null}
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold text-foreground">Course content</h2>
-            <p className="text-sm text-muted-foreground">
-              {modules.length} module{modules.length === 1 ? "" : "s"} · {lessons.length} lesson
-              {lessons.length === 1 ? "" : "s"}
-            </p>
-            <div className="space-y-3">
+            {longDesc ? (
+              <section className="space-y-3">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <Page className="h-5 w-5 shrink-0 text-primary" />
+                  About this course
+                </h2>
+                {looksLikeHtml(longDesc) ? (
+                  <div
+                    className="prose-custom max-w-none text-sm text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: longDesc }}
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">{longDesc}</p>
+                )}
+              </section>
+            ) : null}
+
+            {prerequisites ? (
+              <section className="space-y-3">
+                <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                  <CheckCircle className="h-5 w-5 shrink-0 text-primary" />
+                  Prerequisites
+                </h2>
+                {looksLikeHtml(prerequisites) ? (
+                  <div
+                    className="prose-custom max-w-none text-sm text-muted-foreground"
+                    dangerouslySetInnerHTML={{ __html: prerequisites }}
+                  />
+                ) : (
+                  <p className="whitespace-pre-wrap text-sm text-muted-foreground">{prerequisites}</p>
+                )}
+              </section>
+            ) : null}
+
+            <section className="space-y-3">
+              <h2 className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                <BookStack className="h-5 w-5 shrink-0 text-primary" />
+                Course content
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {modules.length} module{modules.length === 1 ? "" : "s"}
+              </p>
               {modules.length === 0 ? (
                 <p className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                  No curriculum published yet.
+                  No modules published yet.
                 </p>
               ) : (
-                modules.map((mod) => {
-                  const mid = Number(mod.id);
-                  const modLessons = lessonsByModule(mid);
-                  return (
-                    <div
-                      key={mid}
-                      className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
+                <ul className="space-y-2">
+                  {modules.map((mod) => (
+                    <li
+                      key={mod.id}
+                      className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm"
                     >
-                      <div className="border-b border-border bg-muted/30 px-4 py-3">
-                        <h3 className="font-semibold text-foreground">
-                          {String(mod.title ?? "Module")}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          {modLessons.length} lesson{modLessons.length === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                      <ul className="divide-y divide-border">
-                        {modLessons.length === 0 ? (
-                          <li className="px-4 py-3 text-sm text-muted-foreground">
-                            No lessons in this module.
-                          </li>
-                        ) : (
-                          modLessons.map((lesson) => {
-                            const row = lesson as CourseRow;
-                            const playable = lessonRowPlayable(row);
-                            const hint = lessonPlaybackHint(row);
-                            const tintedPrimary =
-                              playable ||
-                              (typeof row.primary_video_url === "string" &&
-                                row.primary_video_url.length > 0);
-
-                            return (
-                              <li key={Number(row.id)} className="px-0 py-0">
-                                <button
-                                  type="button"
-                                  className={cn(
-                                    "flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors",
-                                    playable &&
-                                      "hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                                  )}
-                                  onClick={() => {
-                                    if (!playable) return;
-                                    setLessonPlayerId(Number(row.id));
-                                    setLessonDrawerOpen(true);
-                                  }}
-                                >
-                                  <span title={hint} className="inline-flex shrink-0">
-                                    <Play
-                                      className={cn(
-                                        "h-4 w-4",
-                                        tintedPrimary ? "text-primary" : "text-muted-foreground/50"
-                                      )}
-                                    />
-                                  </span>
-                                  <span className="min-w-0 flex-1 font-medium text-foreground">
-                                    {String(row.title ?? "Lesson")}
-                                  </span>
-                                </button>
-                              </li>
-                            );
-                          })
-                        )}
-                      </ul>
-                    </div>
-                  );
-                })
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                        <NavArrowRight className="h-4 w-4" />
+                      </span>
+                      <span className="font-medium text-foreground">{String(mod.title ?? "Module")}</span>
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
-          </section>
-        </div>
-
-        <aside className="space-y-4 md:sticky md:top-4 md:self-start">
-          <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
-            <h3 className="text-sm font-semibold text-foreground">Course details</h3>
-            <dl className="mt-3 space-y-2 text-sm">
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Language</dt>
-                <dd className="text-right font-medium text-foreground">{language}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Level</dt>
-                <dd className="text-right font-medium text-foreground">{level}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Price</dt>
-                <dd className="text-right font-medium text-foreground">{price}</dd>
-              </div>
-              <div className="flex justify-between gap-2">
-                <dt className="text-muted-foreground">Status</dt>
-                <dd className="text-right font-medium text-foreground">
-                  {String(course.status ?? "—")}
-                </dd>
-              </div>
-            </dl>
+            </section>
           </div>
-        </aside>
+
+          <aside className="flex flex-col gap-4 lg:sticky lg:top-20 lg:self-start">
+            <Card className="border-primary/25 shadow-md ring-1 ring-primary/10">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShoppingBag className="h-5 w-5 text-primary" />
+                  Enroll
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-baseline justify-between gap-2 border-b border-border pb-3">
+                  <span className="text-sm text-muted-foreground">
+                    {course.is_free ? "Price" : "From"}
+                  </span>
+                  <span
+                    className={`text-2xl font-bold tabular-nums ${course.is_free ? "text-primary" : "text-foreground"}`}
+                  >
+                    {course.is_free ? "Free" : formatMoney(price)}
+                  </span>
+                </div>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  Pick a plan, then sign in to continue enrollment with your institution.
+                </p>
+                <div className="flex flex-col gap-2">
+                  <Button
+                    type="button"
+                    className="w-full gap-2"
+                    onClick={() => setPlansOpen(true)}
+                    disabled={plans.length === 0 && !course.is_free}
+                  >
+                    <ShoppingBag className="h-4 w-4" />
+                    {plans.length > 0 ? "Buy now — view plans" : "Plans unavailable"}
+                  </Button>
+                  <Button type="button" variant="outline" className="w-full" asChild>
+                    <Link to={loginHref}>Sign in to continue</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+              <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                <Page className="h-4 w-4 text-primary" />
+                Details
+              </h3>
+              <dl className="mt-3 space-y-2.5 text-sm">
+                <div className="flex justify-between gap-2">
+                  <dt className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Language className="h-3.5 w-3.5 shrink-0" />
+                    Language
+                  </dt>
+                  <dd className="text-right font-medium text-foreground">{language}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="inline-flex items-center gap-1.5 text-muted-foreground">
+                    <Medal className="h-3.5 w-3.5 shrink-0" />
+                    Level
+                  </dt>
+                  <dd className="text-right font-medium text-foreground">{level}</dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Duration</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {formatOptionalDisplay(course.estimated_duration)}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <dt className="text-muted-foreground">Status</dt>
+                  <dd className="text-right font-medium text-foreground">
+                    {String(course.status ?? "—")}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </aside>
+        </div>
       </div>
 
-      <Drawer
-        open={lessonDrawerOpen}
-        onClose={() => {
-          setLessonDrawerOpen(false);
-          setLessonPlayerId(null);
-        }}
-      >
+      <Drawer open={plansOpen} onClose={() => setPlansOpen(false)}>
         <DrawerOverlay />
-        <DrawerContent className="max-h-[min(92vh,920px)] max-w-3xl overflow-auto">
+        <DrawerContent className="max-w-lg">
           <DrawerHeader>
-            <DrawerTitle>
-              {drawerLesson != null ? String(drawerLesson.title ?? "Lesson video") : "Lesson video"}
-            </DrawerTitle>
+            <DrawerTitle>Subscription plans</DrawerTitle>
+            <DrawerDescription>
+              Plans linked to this course. Contact your administrator or sign in to proceed with
+              enrollment.
+            </DrawerDescription>
           </DrawerHeader>
           <DrawerBody className="space-y-4">
-            {drawerLesson != null && String(drawerLesson.description ?? "").trim() !== "" ? (
+            {plans.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                {String(drawerLesson.description ?? "").trim()}
+                No subscription plans are configured for this course yet.
               </p>
-            ) : null}
-
-            {playbackQuery.isLoading ? (
-              <div className="flex justify-center py-12">
-                <Spinner className="h-10 w-10 text-primary" />
-              </div>
-            ) : null}
-
-            {playbackQuery.isError ? (
-              <p className="text-sm text-destructive">Could not load playback. Try again.</p>
-            ) : null}
-
-            {!playbackQuery.isLoading &&
-            playbackQuery.data?.success &&
-            playbackQuery.data.data?.src ? (
-              <div className="overflow-hidden rounded-lg border border-border bg-card shadow-sm">
-                <LessonVideoPlayer
-                  src={String(playbackQuery.data.data.src)}
-                  playbackType={playbackQuery.data.data.type}
-                />
-              </div>
-            ) : null}
-
-            {!playbackQuery.isLoading &&
-            playbackQuery.data?.success &&
-            !playbackQuery.data.data?.src ? (
-              <p className="text-sm text-muted-foreground">No playable URL for this lesson.</p>
-            ) : null}
+            ) : (
+              <ul className="space-y-3">
+                {plans.map((p) => (
+                  <li
+                    key={p.id}
+                    className="rounded-lg border border-border bg-muted/20 px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div>
+                        <p className="font-semibold text-foreground">{p.plan_name}</p>
+                        {p.plan_description ? (
+                          <p className="mt-1 text-sm text-muted-foreground">{p.plan_description}</p>
+                        ) : null}
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          {p.duration_in_days} days · {p.subscription_type}
+                        </p>
+                      </div>
+                      <p className="text-lg font-bold tabular-nums text-primary">
+                        {formatMoney(String(p.price))}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </DrawerBody>
+          <DrawerFooter>
+            <Button type="button" variant="outline" onClick={() => setPlansOpen(false)}>
+              Close
+            </Button>
+            <Button type="button" asChild>
+              <Link to={loginHref}>Sign in to enroll</Link>
+            </Button>
+          </DrawerFooter>
         </DrawerContent>
       </Drawer>
     </div>
