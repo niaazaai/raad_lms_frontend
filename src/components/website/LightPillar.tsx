@@ -45,11 +45,11 @@ const LightPillar = ({
   interactive = false,
   className = "",
   glowAmount = 0.005,
-  pillarWidth = 3.0,
+  pillarWidth = 4.0,
   pillarHeight = 0.4,
   noiseIntensity = 0.5,
   mixBlendMode = "screen",
-  pillarRotation = 0,
+  pillarRotation = 26,
   quality = "high",
 }: LightPillarProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -89,13 +89,12 @@ const LightPillar = ({
     if (isMobile && quality !== "low") effectiveQuality = "low";
 
     const qualitySettings = {
-      low: { iterations: 24, waveIterations: 1, pixelRatio: 0.5, precision: "mediump", stepMultiplier: 1.5 },
-      medium: { iterations: 40, waveIterations: 2, pixelRatio: 0.65, precision: "mediump", stepMultiplier: 1.2 },
+      low: { iterations: 24, waveIterations: 1, pixelRatio: 0.5, stepMultiplier: 1.5 },
+      medium: { iterations: 40, waveIterations: 2, pixelRatio: 0.65, stepMultiplier: 1.2 },
       high: {
         iterations: 80,
         waveIterations: 4,
         pixelRatio: Math.min(window.devicePixelRatio, 2),
-        precision: "highp",
         stepMultiplier: 1.0,
       },
     };
@@ -113,7 +112,6 @@ const LightPillar = ({
         antialias: false,
         alpha: true,
         powerPreference: effectiveQuality === "low" ? "low-power" : "high-performance",
-        precision: settings.precision as THREE.WebGLRendererParameters["precision"],
         stencil: false,
         depth: false,
       });

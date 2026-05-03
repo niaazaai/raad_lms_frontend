@@ -7,7 +7,7 @@ interface LandingNavbarProps {
 }
 
 const linkClass =
-  "rounded-full px-3 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary/10 hover:text-[#004a80]";
+  "rounded-full px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-white/15 hover:text-white";
 
 const LandingNavbar = ({ loginHref, className }: LandingNavbarProps) => {
   return (
@@ -19,11 +19,9 @@ const LandingNavbar = ({ loginHref, className }: LandingNavbarProps) => {
     >
       <nav
         className={cn(
-          "pointer-events-auto flex w-full max-w-6xl items-center justify-between gap-4 rounded-2xl px-4 py-2.5 md:px-6 md:py-3",
-          "border-2 border-white/90",
-          "shadow-[0_10px_40px_rgba(0,105,180,0.14),0_2px_8px_rgba(0,60,100,0.08),inset_0_1px_0_rgba(255,255,255,0.98),inset_0_0_0_1px_rgba(0,105,180,0.06)]",
-          "backdrop-blur-2xl backdrop-saturate-150",
-          "bg-[linear-gradient(145deg,rgba(255,255,255,0.94)_0%,rgba(245,250,255,0.9)_38%,rgba(236,246,255,0.88)_72%,rgba(248,250,252,0.92)_100%)]",
+          "pointer-events-auto flex w-full max-w-6xl items-center justify-between gap-4 rounded-2xl border-[0.5px] border-solid border-neutral-500/45 px-4 py-2.5 shadow-sm md:px-6 md:py-3",
+          "backdrop-blur-xl backdrop-saturate-150",
+          "bg-white/25 dark:bg-white/10",
         )}
         aria-label="Main"
       >
@@ -36,20 +34,14 @@ const LandingNavbar = ({ loginHref, className }: LandingNavbarProps) => {
             <a href="/" className={cn(linkClass, "shrink-0")}>
               Home
             </a>
-            <a href="/#about" className={cn(linkClass, "hidden sm:inline-flex")}>
-              About us
-            </a>
             <a href="/explore-courses" className={cn(linkClass, "shrink-0")}>
               Programs
-            </a>
-            <a href="/#about" className={cn(linkClass, "sm:hidden")}>
-              About
             </a>
           </div>
 
           <Button
             asChild
-            className="ml-1 shrink-0 rounded-full border-0 bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:bg-primary-active md:ml-2"
+            className="ml-1 shrink-0 rounded-full border-0 bg-white px-5 py-2.5 text-sm font-semibold text-primary shadow-md hover:bg-white/95 md:ml-2"
           >
             <a href={loginHref}>Sign in</a>
           </Button>

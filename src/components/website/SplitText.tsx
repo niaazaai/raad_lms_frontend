@@ -47,17 +47,18 @@ function buildCharSpans(root: HTMLElement, source: string): HTMLElement[] {
 
 function buildWordSpans(root: HTMLElement, source: string): HTMLElement[] {
   const spans: HTMLElement[] = [];
-  const parts = source.split(/(\s+)/);
-  for (const part of parts) {
+  const words = source.trim().split(/\s+/).filter(Boolean);
+  words.forEach((word, i) => {
     const span = document.createElement("span");
     span.className = "split-word inline-block whitespace-nowrap";
     span.style.willChange = "transform, opacity";
-    span.textContent = part;
-    root.appendChild(span);
-    if (part.trim() !== "") {
-      spans.push(span);
+    if (i < words.length - 1) {
+      span.style.marginRight = "0.3em";
     }
-  }
+    span.textContent = word;
+    root.appendChild(span);
+    spans.push(span);
+  });
   return spans;
 }
 
@@ -209,7 +210,7 @@ const SplitText = ({
         tween.scrollTrigger?.kill();
         tween.kill();
         if (triggerOnScroll) {
-          ScrollTrigger.getAll().forEach((st) => {
+          ScrollTrigger.getAll().forEach((st: { trigger?: Element | null; kill: () => void }) => {
             if (st.trigger === el) st.kill();
           });
         }

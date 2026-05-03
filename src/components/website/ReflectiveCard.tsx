@@ -59,7 +59,7 @@ const ReflectiveCard = ({
   return (
     <div
       className={cn(
-        "group relative isolate flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] bg-[#0c1422] font-sans shadow-[0_20px_50px_rgba(0,0,0,0.35),0_0_0_1px_rgba(255,255,255,0.12)_inset]",
+        "group relative isolate flex h-full w-full flex-col overflow-hidden rounded-[1.25rem] border border-border bg-[#0c1422] font-sans shadow-sm",
         className,
       )}
       style={{ ...style, ...cssVariables }}
@@ -135,11 +135,11 @@ const ReflectiveCard = ({
 
         <div className="pointer-events-none absolute inset-0 z-[3] rounded-t-[1.25rem] bg-[linear-gradient(to_top,rgba(6,20,40,0.85)_0%,rgba(6,20,40,0.2)_45%,transparent_100%)]" />
 
-        <div className="pointer-events-none absolute inset-0 z-[4] rounded-t-[1.25rem] p-px bg-[linear-gradient(135deg,rgba(255,255,255,0.75)_0%,rgba(255,255,255,0.15)_50%,rgba(255,255,255,0.55)_100%)] [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] [mask-composite:exclude]" />
+        <div className="pointer-events-none absolute inset-0 z-[4] rounded-t-[1.25rem] p-px bg-border/80 [mask:linear-gradient(#fff_0_0)_content-box,linear-gradient(#fff_0_0)] [mask-composite:exclude]" />
       </div>
 
       <div
-        className="relative z-10 flex flex-1 flex-col border-t border-white/10 bg-[var(--overlay-color)] text-[var(--text-color)]"
+        className="relative z-10 flex flex-1 flex-col border-t border-border bg-[var(--overlay-color)] text-[var(--text-color)]"
         style={{ color }}
       >
         {children}
