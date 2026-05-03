@@ -5,8 +5,9 @@ export type UserTypeValue = z.infer<typeof UserType>;
 
 export function getDashboardPath(type: UserTypeValue | undefined): string {
   switch (type) {
-    case "admin":
     case "student":
+      return "/student";
+    case "admin":
     case "instructor":
     default:
       return "/dashboard";
