@@ -1,13 +1,14 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye, EyeClosed } from "iconoir-react";
 import { Button, Input, Label } from "@/components/ui";
-import { LoginSchema, LoginFormData } from "@/data/models/User";
+import { LoginSchema, LoginFormData, getDashboardPath } from "@/data/models/User";
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
 import { cn } from "@/lib/utils";
+import { getSafeRedirectPath } from "@/lib/authRedirect";
 import PixelBlast from "@/components/ui/pixel-blast";
 import LoginWith2FA from "./LoginWith2FA";
 
@@ -17,6 +18,7 @@ const authFormLightScope =
 
 const LoginPage = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, pending2FA } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -40,7 +42,9 @@ const LoginPage = () => {
     try {
       const result = await login(data.email, data.password);
       if (result === true) {
-        navigate("/dashboard", { replace: true });
+        const u = useAuthStore.getState().user;
+        const redirect = getSafeRedirectPath(searchParams.get("redirect"));
+        navigate(redirect ?? getDashboardPath(u?.type ?? "student"), { replace: true });
       } else if (result === "requires_2fa") {
         // 2FA form will be shown via pending2FA state
       } else {

@@ -16,9 +16,8 @@ function resolveLoginHref(): string {
   return "/login";
 }
 
-function courseEnrollHref(loginHref: string, courseId: number): string {
-  const path = `/course/courses/${courseId}/view`;
-  return `${loginHref}?redirect=${encodeURIComponent(path)}`;
+function coursePublicViewPath(courseId: number): string {
+  return `/course/courses/${courseId}/view`;
 }
 
 const ExploreCoursesPage = () => {
@@ -59,7 +58,7 @@ const ExploreCoursesPage = () => {
                   <PublicCourseCard
                     key={course.id}
                     course={course}
-                    enrollHref={courseEnrollHref(loginHref, course.id)}
+                    enrollHref={coursePublicViewPath(course.id)}
                   />
                 ))}
               </div>

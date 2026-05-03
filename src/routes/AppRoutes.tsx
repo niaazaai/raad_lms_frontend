@@ -13,6 +13,7 @@ const VerifyEmailExpiredPage = lazy(() => import("@/pages/auth/VerifyEmailExpire
 
 const LandingPage = lazy(() => import("@/pages/LandingPage"));
 const ExploreCoursesPage = lazy(() => import("@/pages/ExploreCoursesPage"));
+const CourseViewPage = lazy(() => import("@/modules/Course/features/CourseViewPage/CourseViewPage"));
 
 // Error pages
 const NotFoundPage = lazy(() => import("@/pages/errors/NotFound"));
@@ -111,6 +112,15 @@ const AppRoutes = () => {
         element={
           <Suspense fallback={<PageLoader />}>
             <ExploreCoursesPage />
+          </Suspense>
+        }
+      />
+
+      <Route
+        path="/course/courses/:courseId/view"
+        element={
+          <Suspense fallback={<PageLoader />}>
+            <CourseViewPage />
           </Suspense>
         }
       />

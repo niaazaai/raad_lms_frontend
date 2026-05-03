@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft } from "iconoir-react";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/features/auth";
 import { useAuthStore } from "@/store";
+import { getDashboardPath } from "@/data/models/User";
+import { getSafeRedirectPath } from "@/lib/authRedirect";
 import { callApi, fetchCsrfCookie } from "@/services";
 import { API_ENDPOINTS } from "@/data/constants/endpoints";
 import { RequestMethod } from "@/data/constants/methods";
@@ -21,6 +23,7 @@ type TwoFactorFormData = z.infer<typeof TwoFactorSchema>;
 
 const LoginWith2FA = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { verify2FA, pending2FA, setPending2FA } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResending, setIsResending] = useState(false);
@@ -41,7 +44,9 @@ const LoginWith2FA = () => {
     try {
       const success = await verify2FA(pending2FA.token, data.code);
       if (success) {
-        navigate("/dashboard", { replace: true });
+        const u = useAuthStore.getState().user;
+        const redirect = getSafeRedirectPath(searchParams.get("redirect"));
+        navigate(redirect ?? getDashboardPath(u?.type ?? "student"), { replace: true });
       } else {
         const currentError = useAuthStore.getState().error;
         setError("code", { type: "manual", message: currentError || "Invalid code" });

@@ -6,7 +6,6 @@ const CourseHub = lazy(() => import("../features/CourseHub/CourseHub"));
 const CourseEntityList = lazy(() => import("../features/CourseEntityList/CourseEntityList"));
 const CoursesPage = lazy(() => import("../features/CoursesPage/CoursesPage"));
 const CourseWizardPage = lazy(() => import("../features/CourseWizardPage/CourseWizardPage"));
-const CourseViewPage = lazy(() => import("../features/CourseViewPage/CourseViewPage"));
 
 const courseAnyPermissions = [
   "course.main_categories.read",
@@ -42,12 +41,6 @@ export const CourseModuleRoutes: ProtectedRouteType[] = [
     path: "/course/courses/create",
     component: <CourseWizardPage />,
     permission: "course.courses.create",
-    anyPermission: courseAnyPermissions,
-  },
-  {
-    path: "/course/courses/:courseId/view",
-    component: <CourseViewPage />,
-    permission: "course.courses.read",
     anyPermission: courseAnyPermissions,
   },
   {
