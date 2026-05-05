@@ -17,6 +17,7 @@ import type { CourseEntityFormField } from "../../data/courseEntityFormRegistry"
 import {
   getCourseEntityDetailFromResponse,
   getCourseListFromResponse,
+  useApproveStudentSubscription,
   useCourseEntityDetail,
   useCourseEntityList,
   useCreateCourseEntity,
@@ -35,6 +36,7 @@ import {
   Label,
   RichTextEditor,
   SearchableSelect,
+  useConfirmDialog,
 } from "@/components/ui";
 import { cn } from "@/lib/utils";
 import { API_V1_BASE } from "@/services/apiClient";
@@ -424,6 +426,9 @@ const CourseEntityFormDrawer = ({
 
   const { mutate: createEntity, isPending: creating } = useCreateCourseEntity(slug);
   const { mutate: updateEntity, isPending: updating } = useUpdateCourseEntity(slug);
+  const { confirm } = useConfirmDialog();
+  const { mutateAsync: approveStudentSubscription, isPending: approvingStudentSubscription } =
+    useApproveStudentSubscription();
   const submitting = creating || updating;
 
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -818,6 +823,44 @@ const CourseEntityFormDrawer = ({
                   <p className="text-sm text-muted-foreground">No voucher on file.</p>
                 )}
               </div>
+
+              {(String(detail.subscription_status ?? "") === "pending" ||
+                String(detail.payment_status ?? "") === "pending") && (
+                <Button
+                  type="button"
+                  className="mt-4 w-full"
+                  variant="default"
+                  loading={approvingStudentSubscription}
+                  disabled={approvingStudentSubscription || detail.id == null}
+                  onClick={() => {
+                    const rawId = detail.id;
+                    const numericId =
+                      typeof rawId === "number" ? rawId : Number(rawId);
+                    if (rawId == null || Number.isNaN(numericId)) return;
+
+                    void confirm({
+                      title: "Approve subscription?",
+                      message:
+                        "This will activate the subscription, mark payment as paid, apply any eligible student discount on the server, and notify the learner.",
+                      variant: "success",
+                      confirmText: "Approve",
+                      cancelText: "Cancel",
+                    }).then(async (ok) => {
+                      if (!ok) return;
+                      try {
+                        await approveStudentSubscription(numericId);
+                        onSuccess();
+                      } catch (e) {
+                        toast.error(
+                          e instanceof Error ? e.message : "Approval failed. Please try again."
+                        );
+                      }
+                    });
+                  }}
+                >
+                  Approve subscription and apply discount
+                </Button>
+              )}
             </div>
           ) : null}
 

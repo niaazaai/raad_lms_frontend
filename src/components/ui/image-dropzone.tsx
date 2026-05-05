@@ -43,13 +43,25 @@ const ImageDropzone = ({
   }, [initialPreviewUrl, value]);
 
   useLayoutEffect(() => {
-    if (!value || value.type === "application/pdf") {
+    if (!value) {
       setPreviewUrl(null);
       return undefined;
     }
-    if (mediaPreview === "file" && !value.type.startsWith("video/")) {
+    if (value.type === "application/pdf") {
       setPreviewUrl(null);
       return undefined;
+    }
+    if (mediaPreview === "video") {
+      if (!value.type.startsWith("video/")) {
+        setPreviewUrl(null);
+        return undefined;
+      }
+    } else {
+      // image (default) or "file" voucher: preview images only; PDF handled above
+      if (!value.type.startsWith("image/")) {
+        setPreviewUrl(null);
+        return undefined;
+      }
     }
     const url = URL.createObjectURL(value);
     setPreviewUrl(url);
@@ -107,10 +119,16 @@ const ImageDropzone = ({
         {value || (initialPreviewUrl && !remotePreviewFailed) ? (
           <div className="relative">
             {value && value.type === "application/pdf" ? (
-              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <Page className="h-10 w-10 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground truncate max-w-[140px]">
-                  {value.name || initialPreviewName || "File"}
+              <div className="flex w-full max-w-md flex-col items-center gap-2 rounded-xl border border-border bg-muted/30 px-6 py-6">
+                <Page className="h-14 w-14 text-primary" />
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  PDF voucher
+                </p>
+                <span className="max-w-full truncate text-center text-sm font-medium text-foreground">
+                  {value.name || initialPreviewName || "document.pdf"}
+                </span>
+                <span className="text-center text-xs text-muted-foreground">
+                  {(value.size / 1024).toFixed(1)} KB · tap the dropzone to replace
                 </span>
               </div>
             ) : value && previewUrl && mediaPreview === "video" ? (
@@ -123,20 +141,13 @@ const ImageDropzone = ({
                   previewMode === "wide" ? "w-full max-w-[280px]" : "w-full max-w-[240px]"
                 )}
               />
-            ) : value && previewUrl && mediaPreview === "file" ? (
-              <div className="flex flex-col items-center gap-1 rounded-lg border border-border bg-muted/30 px-4 py-3">
-                <Page className="h-10 w-10 text-muted-foreground" />
-                <span className="text-xs font-medium text-foreground truncate max-w-[200px]">
-                  {value.name || initialPreviewName || "File"}
-                </span>
-              </div>
             ) : value && previewUrl ? (
               <img
                 src={previewUrl}
-                alt="Preview"
+                alt="Voucher preview"
                 className={cn(
-                  "object-cover border border-border rounded-lg",
-                  previewMode === "square" ? "h-24 w-24" : "h-20 w-full max-w-[240px]"
+                  "max-h-64 w-full max-w-md rounded-lg border border-border bg-muted/20 object-contain",
+                  previewMode === "square" && "h-24 w-24 max-h-24 max-w-24 object-cover"
                 )}
               />
             ) : initialPreviewUrl && !remotePreviewFailed && mediaPreview === "video" ? (

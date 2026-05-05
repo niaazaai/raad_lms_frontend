@@ -146,3 +146,28 @@ export function useUpdateCourseEntity(slug: CourseEntitySlug) {
     },
   });
 }
+
+/** Approve a pending student subscription (active + paid, discount applied on server, student notified). */
+export function useApproveStudentSubscription() {
+  const queryClient = useQueryClient();
+  const slug: CourseEntitySlug = "student-subscriptions";
+  const cfg = COURSE_ENTITY_REGISTRY[slug];
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const response = await callApi<CourseRow>({
+        url: `${cfg.apiPath}/${id}/approve`,
+        method: RequestMethod.POST,
+        shouldPopError: false,
+      });
+      if (!response.ok) {
+        throw new Error(response.data?.message || "Approval failed");
+      }
+      return response.data;
+    },
+    onSuccess: (_data: unknown, id: number) => {
+      queryClient.invalidateQueries({ queryKey: ["course", "entity", slug] });
+      queryClient.invalidateQueries({ queryKey: ["course", "entity", slug, "detail", id] });
+    },
+  });
+}
