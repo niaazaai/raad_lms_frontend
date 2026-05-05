@@ -69,6 +69,7 @@ export function useCourseLearn(courseId: number | null, options?: { enabled?: bo
 export interface MyEnrollmentItem {
   id: number;
   course_id: number;
+  plan_id: number;
   course_title: string | null;
   course_thumbnail_url: string | null;
   plan_name: string | null;
@@ -86,17 +87,29 @@ export interface MyEnrollmentsPagination {
   has_more_pages: boolean;
 }
 
-export function useMyEnrollments(params?: { page?: number; per_page?: number }) {
+export function useMyEnrollments(params?: {
+  page?: number;
+  per_page?: number;
+  course_id?: number | null;
+  enabled?: boolean;
+}) {
+  const courseId = params?.course_id;
+  const page = params?.page ?? 1;
+  const perPage = params?.per_page ?? 12;
+  const enabled = params?.enabled ?? true;
+
   return useQueryApi<MyEnrollmentItem[]>({
-    queryKey: ["me", "enrollments", params?.page ?? 1, params?.per_page ?? 12],
+    queryKey: ["me", "enrollments", page, perPage, courseId ?? "all"],
     url: "/me/enrollments",
     method: RequestMethod.GET,
     params: {
-      page: params?.page ?? 1,
-      per_page: params?.per_page ?? 12,
+      page,
+      per_page: perPage,
+      ...(courseId != null ? { course_id: courseId } : {}),
     },
     options: {
       staleTime: 30_000,
+      enabled,
     },
   });
 }

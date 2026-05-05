@@ -50,6 +50,7 @@ import {
   usePublicCourseDetail,
   usePublicCoursePreviewPlayback,
 } from "@/hooks/usePublicCourses";
+import { getMyEnrollmentsFromResponse, useMyEnrollments } from "@/hooks/useStudentLearning";
 import { toast } from "sonner";
 import type { PublicSubscriptionPlan } from "@/hooks/usePublicCourses";
 import LessonVideoPlayer from "./LessonVideoPlayer";
@@ -91,6 +92,11 @@ const CourseViewPage = () => {
 
   const detailQuery = usePublicCourseDetail(validId, { enabled: validId != null });
   const previewQuery = usePublicCoursePreviewPlayback(validId, { enabled: validId != null });
+  const myEnrollmentsQuery = useMyEnrollments({
+    course_id: validId ?? undefined,
+    per_page: 48,
+    enabled: Boolean(user && validId != null),
+  });
 
   const payload = useMemo(
     () => getPublicCourseDetailFromResponse(detailQuery.data),
@@ -105,6 +111,22 @@ const CourseViewPage = () => {
   const course = payload;
   const modules = course?.modules ?? [];
   const plans: PublicSubscriptionPlan[] = course?.subscription_plans ?? [];
+
+  const myEnrollmentsForCourse = useMemo(
+    () => getMyEnrollmentsFromResponse(myEnrollmentsQuery.data),
+    [myEnrollmentsQuery.data],
+  );
+
+  const isPlanBlocked = useMemo(() => {
+    const blocked = new Set<number>();
+    for (const row of myEnrollmentsForCourse) {
+      const st = row.subscription_status;
+      if (st === "pending" || st === "active") {
+        blocked.add(row.plan_id);
+      }
+    }
+    return (planId: number) => blocked.has(planId);
+  }, [myEnrollmentsForCourse]);
 
   const lowestPlanPrice = useMemo(() => {
     if (plans.length === 0 || course?.is_free) return course?.price ?? "0";
@@ -125,6 +147,13 @@ const CourseViewPage = () => {
   const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
   const [voucherFile, setVoucherFile] = useState<File | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    setSelectedPlanId((prev) => {
+      if (prev == null) return prev;
+      return isPlanBlocked(prev) ? null : prev;
+    });
+  }, [isPlanBlocked, myEnrollmentsForCourse]);
 
   const loginHref = `/login?redirect=${encodeURIComponent(`/course/courses/${validId ?? 0}/view`)}`;
   const registerHref = `/register?redirect=${encodeURIComponent(`/course/courses/${validId ?? 0}/view`)}`;
@@ -156,7 +185,11 @@ const CourseViewPage = () => {
     url: "/student-subscriptions",
     method: RequestMethod.POST,
     hasFiles: true,
-    invalidateKeys: [["course", "entity", "student-subscriptions"], [...PUBLIC_COURSES_QUERY_KEY]],
+    invalidateKeys: [
+      ["course", "entity", "student-subscriptions"],
+      [...PUBLIC_COURSES_QUERY_KEY],
+      ["me", "enrollments"],
+    ],
   });
 
   if (validId == null) {
@@ -433,13 +466,15 @@ const CourseViewPage = () => {
                     <ShoppingBag className="h-4 w-4" />
                     {plans.length > 0 ? "View plans" : "Plans unavailable"}
                   </Button>
-                  <Button type="button" variant="outline" className="w-full" asChild>
-                    <Link to={loginHref}>Sign in to continue</Link>
-                  </Button>
                   {!user ? (
-                    <Button type="button" variant="ghost" className="w-full text-muted-foreground" asChild>
-                      <Link to={registerHref}>New here? Create an account</Link>
-                    </Button>
+                    <>
+                      <Button type="button" variant="outline" className="w-full" asChild>
+                        <Link to={loginHref}>Sign in to continue</Link>
+                      </Button>
+                      <Button type="button" variant="ghost" className="w-full text-muted-foreground" asChild>
+                        <Link to={registerHref}>New here? Create an account</Link>
+                      </Button>
+                    </>
                   ) : null}
                 </div>
               </CardContent>
@@ -567,8 +602,8 @@ const CourseViewPage = () => {
           <DrawerHeader>
             <DrawerTitle>Course Subscription</DrawerTitle>
             <DrawerDescription>
-              Complete your enrollment. We will review your voucher and activate access after payment
-              verification.
+              Choose a plan, upload your payment voucher, and submit for review. Access dates are set when
+              your payment is approved.
             </DrawerDescription>
           </DrawerHeader>
 
@@ -600,16 +635,33 @@ const CourseViewPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {plans.map((p) => {
                         const isSelected = selectedPlanId === p.id;
+                        const blocked = isPlanBlocked(p.id);
                         const planPrice = formatMoney(String(p.price));
                         return (
                           <div
                             key={p.id}
-                            onClick={() => setSelectedPlanId(isSelected ? null : p.id)}
+                            role="button"
+                            tabIndex={blocked ? -1 : 0}
+                            onClick={() => {
+                              if (blocked) return;
+                              setSelectedPlanId(isSelected ? null : p.id);
+                            }}
+                            onKeyDown={(e) => {
+                              if (blocked) return;
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedPlanId(isSelected ? null : p.id);
+                              }
+                            }}
                             className={cn(
-                              "cursor-pointer rounded-2xl border p-6 transition-all hover:shadow-lg hover:-translate-y-0.5",
-                              isSelected
-                                ? "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2"
-                                : "border-border hover:border-primary/60 bg-card"
+                              "rounded-2xl border p-6 transition-all",
+                              blocked
+                                ? "cursor-not-allowed border-muted bg-muted/30 opacity-70"
+                                : "cursor-pointer hover:shadow-lg hover:-translate-y-0.5",
+                              !blocked &&
+                                (isSelected
+                                  ? "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2"
+                                  : "border-border hover:border-primary/60 bg-card"),
                             )}
                           >
                             <div className="flex justify-between">
@@ -631,11 +683,15 @@ const CourseViewPage = () => {
                                 <div className="text-3xl font-bold text-primary tabular-nums tracking-tighter">
                                   {planPrice}
                                 </div>
-                                {isSelected && (
+                                {blocked ? (
+                                  <div className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-muted px-4 py-1 text-xs font-medium text-muted-foreground">
+                                    Already pending or active
+                                  </div>
+                                ) : isSelected ? (
                                   <div className="mt-6 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-1 text-xs font-medium text-primary-foreground">
                                     <CheckCircle className="h-3.5 w-3.5" /> Selected
                                   </div>
-                                )}
+                                ) : null}
                               </div>
                             </div>
                           </div>
@@ -731,7 +787,12 @@ const CourseViewPage = () => {
                       <Button
                         type="button"
                         className="w-full py-6 text-base font-semibold"
-                        disabled={createSubscriptionMutation.isPending || !selectedPlanId || !voucherFile}
+                        disabled={
+                          createSubscriptionMutation.isPending ||
+                          !selectedPlanId ||
+                          !voucherFile ||
+                          (selectedPlanId != null && isPlanBlocked(selectedPlanId))
+                        }
                         onClick={async () => {
                           const isValid = await enrollmentForm.trigger();
                           if (!isValid || !selectedPlanId || !voucherFile || validId == null) {
@@ -743,14 +804,16 @@ const CourseViewPage = () => {
                             return;
                           }
 
-                          const today = new Date().toISOString().slice(0, 10);
+                          if (isPlanBlocked(selectedPlanId)) {
+                            toast.error("You already have a pending or active subscription for this plan.");
+                            return;
+                          }
+
                           try {
                             await createSubscriptionMutation.mutateAsync({
                               plan_id: String(selectedPlanId),
                               course_id: String(validId),
                               user_id: String(user.id),
-                              subscription_start_date: today,
-                              purchase_date: today,
                               voucher_file: voucherFile,
                             });
                             setShowSuccess(true);
