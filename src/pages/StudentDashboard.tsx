@@ -38,47 +38,59 @@ const StudentDashboardPage = () => {
         </div>
       ) : (
         <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-          {enrollments.map((row) => (
-            <Card
-              key={row.id}
-              className="overflow-hidden border-border/80 transition-shadow hover:shadow-md"
-            >
-              <div className="aspect-video w-full bg-muted">
-                {row.course_thumbnail_url ? (
-                  <img
-                    src={row.course_thumbnail_url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center text-muted-foreground">
-                    <BookStack className="h-14 w-14 opacity-40" />
+          {enrollments.map((row) => {
+            const courseId = Number(row.course_id);
+            const learnPath = Number.isFinite(courseId) ? `/learn/course/${courseId}` : "/student";
+            const title = row.course_title ?? "Course";
+            return (
+              <Link
+                key={row.id}
+                to={learnPath}
+                className="group block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                aria-label={`Open course: ${title}`}
+              >
+                <Card className="h-full overflow-hidden border-border/80 transition-shadow hover:shadow-md group-hover:border-primary/25">
+                  <div className="aspect-video w-full bg-muted">
+                    {row.course_thumbnail_url ? (
+                      <img
+                        src={row.course_thumbnail_url}
+                        alt=""
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-muted-foreground">
+                        <BookStack className="h-14 w-14 opacity-40" />
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-              <CardContent className="space-y-3 p-4">
-                <div>
-                  <h2 className="line-clamp-2 text-lg font-semibold leading-snug">
-                    {row.course_title ?? "Course"}
-                  </h2>
-                  {row.plan_name ? (
-                    <p className="mt-1 text-xs text-muted-foreground">Plan: {row.plan_name}</p>
-                  ) : null}
-                  {row.subscription_end_date ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Access until {row.subscription_end_date}
-                    </p>
-                  ) : null}
-                </div>
-                <Button type="button" className="w-full gap-2" asChild>
-                  <Link to={`/learn/course/${row.course_id}`}>
-                    Continue
-                    <NavArrowRight className="h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                  <CardContent className="space-y-3 p-4">
+                    <div>
+                      <h2 className="line-clamp-2 text-lg font-semibold leading-snug text-foreground group-hover:text-primary">
+                        {title}
+                      </h2>
+                      {row.plan_name ? (
+                        <p className="mt-1 text-xs text-muted-foreground">Plan: {row.plan_name}</p>
+                      ) : null}
+                      {row.subscription_status === "pending" ? (
+                        <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                          Awaiting approval — you can open the course; lessons unlock once active.
+                        </p>
+                      ) : null}
+                      {row.subscription_end_date ? (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Access until {row.subscription_end_date}
+                        </p>
+                      ) : null}
+                    </div>
+                    <div className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-muted/50 py-2.5 text-sm font-medium text-foreground transition-colors group-hover:border-primary group-hover:bg-primary group-hover:text-primary-foreground">
+                      Continue to lessons
+                      <NavArrowRight className="h-4 w-4" aria-hidden />
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>
