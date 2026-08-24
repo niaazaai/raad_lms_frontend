@@ -92,8 +92,10 @@ const ClassAttendancePage = () => {
   }
 
   const classMeta = grid?.class;
+  const classCompleted = classMeta?.status === "completed" || classMeta?.can_edit === false;
   const canEdit =
-    hasPermission("course.lms_classes.update") || hasPermission("course.class_students.update");
+    !classCompleted &&
+    (hasPermission("course.lms_classes.update") || hasPermission("course.class_students.update"));
   const dateRange =
     classMeta?.start_date && classMeta?.end_date
       ? `${classMeta.start_date} → ${classMeta.end_date}`
@@ -125,6 +127,9 @@ const ClassAttendancePage = () => {
         {!dateRange && !isLoading ? (
           <p className="mt-2 text-sm text-warning">{t("course.attendance.missingDates")}</p>
         ) : null}
+        {classCompleted && !isLoading ? (
+          <p className="mt-2 text-sm text-warning">{t("course.attendance.completedLocked")}</p>
+        ) : null}
       </div>
 
       {isLoading || !grid ? (
@@ -150,7 +155,7 @@ const ClassAttendancePage = () => {
               ) : null}
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <AttendanceLegend />
+              <AttendanceLegend completed={classCompleted} />
               {dateRange ? (
                 <span className="shrink-0 rounded-[0.5rem] border border-border bg-background px-2.5 py-1 font-mono text-[11px] text-muted-foreground sm:text-xs">
                   {dateRange}
@@ -159,12 +164,7 @@ const ClassAttendancePage = () => {
             </div>
           </div>
 
-          {grid.dates.length === 0 ? (
-            <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-10 text-sm text-muted-foreground">
-              {t("course.attendance.notStarted")}
-            </div>
-          ) : (
-            <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rtl:flex-row-reverse">
+          <div className="flex min-h-0 min-w-0 flex-1 overflow-hidden rtl:flex-row-reverse">
               {/* Frozen student columns */}
               <div className="flex w-[8.5rem] shrink-0 flex-col overflow-hidden border-e border-border sm:w-[14rem] lg:w-[20.5rem]">
                 <div
@@ -216,6 +216,11 @@ const ClassAttendancePage = () => {
 
               {/* Date / P-A-L columns — one bottom horizontal scrollbar */}
               <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                {grid.dates.length === 0 ? (
+                  <div className="flex min-h-0 flex-1 items-center justify-center px-4 py-10 text-center text-sm text-muted-foreground">
+                    {t("course.attendance.notStarted")}
+                  </div>
+                ) : (
                 <div
                   ref={midBodyRef}
                   className="min-h-0 min-w-0 flex-1 overflow-auto overscroll-contain"
@@ -282,6 +287,7 @@ const ClassAttendancePage = () => {
                     )}
                   </div>
                 </div>
+                )}
               </div>
 
               {/* Frozen totals */}
@@ -323,14 +329,13 @@ const ClassAttendancePage = () => {
                 </div>
               </div>
             </div>
-          )}
         </div>
       )}
     </div>
   );
 };
 
-const AttendanceLegend = () => {
+const AttendanceLegend = ({ completed }: { completed: boolean }) => {
   const { t } = useTranslation();
   return (
     <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
@@ -343,7 +348,9 @@ const AttendanceLegend = () => {
       <span className="rounded-md bg-info/15 px-1.5 py-0.5 font-semibold text-info">
         {t("course.attendance.legendLeave")}
       </span>
-      <span className="hidden text-muted-foreground sm:inline">{t("course.attendance.onlyToday")}</span>
+      <span className="hidden text-muted-foreground sm:inline">
+        {completed ? t("course.attendance.completedLocked") : t("course.attendance.pastAndToday")}
+      </span>
     </div>
   );
 };
