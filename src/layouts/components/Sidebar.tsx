@@ -64,6 +64,8 @@ const NAV_TITLE_KEYS: Record<string, TranslationKey> = {
   Instructors: "sidebar.instructors",
   Students: "sidebar.students",
   Finance: "sidebar.finance",
+  "Finance report": "sidebar.financeReport",
+  "Receive payment": "sidebar.receivePayment",
   Classes: "sidebar.classes",
   Attendance: "sidebar.attendance",
   Blogs: "sidebar.blogs",
@@ -105,6 +107,9 @@ function linkIsActive(pathname: string, itemPath: string): boolean {
   }
   if (itemPath === "/students") {
     return pathname === "/students";
+  }
+  if (itemPath === "/finance") {
+    return pathname === "/finance";
   }
   return pathname === itemPath || pathname.startsWith(`${itemPath}/`);
 }
@@ -235,9 +240,22 @@ const Sidebar = () => {
       },
       {
         title: "Finance",
-        path: "/finance",
         icon: <Wallet className="h-[18px] w-[18px] shrink-0 stroke-[1.5]" />,
-        permission: "finance.read",
+        anyPermission: ["finance.read", "course.class_students.payment", "course.class_students.update"],
+        children: [
+          {
+            title: "Finance report",
+            path: "/finance",
+            icon: <Wallet className="h-4 w-4 shrink-0 stroke-[1.5]" />,
+            permission: "finance.read",
+          },
+          {
+            title: "Receive payment",
+            path: "/finance/receive-payment",
+            icon: <Wallet className="h-4 w-4 shrink-0 stroke-[1.5]" />,
+            anyPermission: ["course.class_students.payment", "course.class_students.update"],
+          },
+        ],
       },
       {
         title: "Blogs",
