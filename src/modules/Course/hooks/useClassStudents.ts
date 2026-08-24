@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMutationApi, useQueryApi } from "@/hooks";
 import { RequestMethod } from "@/data/constants/methods";
+import { FINANCE_QUERY_KEYS } from "@/modules/Finance/data/constants/endpoints";
 import { callApi } from "@/services";
 
 export interface ClassStudentRow {
@@ -41,6 +42,8 @@ export interface ClassStudentRow {
   currency?: string;
   next_due_date?: string | null;
   notes?: string | null;
+  class_name?: string | null;
+  class_code?: string | null;
 }
 
 export interface ClassStudentInvoice {
@@ -150,7 +153,11 @@ export function useRecordClassStudentPayment(classId: number, enrollmentId: numb
   >({
     url: `/lms-classes/${classId}/students/${enrollmentId}/payments`,
     method: RequestMethod.POST,
-    invalidateKeys: [classStudentsListPrefix(classId)],
+    invalidateKeys: [
+      classStudentsListPrefix(classId),
+      FINANCE_QUERY_KEYS.report,
+      FINANCE_QUERY_KEYS.studentEnrollments,
+    ],
   });
 }
 
