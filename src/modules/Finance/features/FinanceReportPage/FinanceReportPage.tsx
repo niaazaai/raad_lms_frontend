@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Button, Card, CardContent, DataTable, Input, Label, PageBreadcrumb } from "@/components/ui";
+import { Link } from "react-router-dom";
+import { Button, Card, CardContent, DataTable, Input, Label, PageBreadcrumb, Switch } from "@/components/ui";
 import { PermissionDeniedCard, useAuth } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -81,9 +82,10 @@ const SummaryCard = ({ label, value, tone = "default" }: SummaryCardProps) => {
 
 const FinanceReportPage = () => {
   const { t } = useTranslation();
-  const { hasPermission } = useAuth();
+  const { hasPermission, hasAnyPermission } = useAuth();
   const [module, setModule] = useState<FinanceModule>("class");
-  const [period, setPeriod] = useState<FinancePeriod>("monthly");
+  const [period, setPeriod] = useState<FinancePeriod>("daily");
+  const [includePending, setIncludePending] = useState(false);
   const [date, setDate] = useState(todayIsoDate());
   const [month, setMonth] = useState(currentMonth());
   const [year, setYear] = useState(String(currentYear()));
@@ -92,7 +94,7 @@ const FinanceReportPage = () => {
 
   const { params, debouncedSearch, updateParams } = useDataTableParams({
     defaultPageSize: 25,
-    defaultSortBy: module === "course" ? "purchase_date" : "created_at",
+    defaultSortBy: "last_payment_date",
     defaultSortDir: "desc",
     searchDebounceMs: 400,
   });
@@ -108,6 +110,7 @@ const FinanceReportPage = () => {
     module,
     period,
     ...periodParams,
+    include_pending: module === "class" ? (includePending ? 1 : 0) : undefined,
     search: debouncedSearch || undefined,
     page: params.page,
     per_page: params.per_page,
@@ -134,7 +137,7 @@ const FinanceReportPage = () => {
 
   const setModuleAndReset = (next: FinanceModule) => {
     setModule(next);
-    updateParams({ page: 1, sort_by: next === "course" ? "purchase_date" : "created_at" });
+    updateParams({ page: 1, sort_by: next === "course" ? "purchase_date" : "last_payment_date" });
   };
 
   const setPeriodAndReset = (next: FinancePeriod) => {
@@ -268,7 +271,7 @@ const FinanceReportPage = () => {
       {
         key: "payment_date",
         header: t("finance.columns.paymentDate"),
-        sortable: false,
+        sortable: true,
         render: (row) => row.payment_date || "—",
       },
       {
@@ -374,6 +377,8 @@ const FinanceReportPage = () => {
     return <PermissionDeniedCard />;
   }
 
+  const canReceivePayment = hasAnyPermission(["course.class_students.payment", "course.class_students.update"]);
+
   const periodTabs: { value: FinancePeriod; label: string }[] = [
     { value: "daily", label: t("finance.periodDaily") },
     { value: "monthly", label: t("finance.periodMonthly") },
@@ -396,6 +401,11 @@ const FinanceReportPage = () => {
             />
           </div>
         </div>
+        {canReceivePayment ? (
+          <Button type="button" asChild>
+            <Link to="/finance/receive-payment">{t("finance.receivePayment.title")}</Link>
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -448,6 +458,21 @@ const FinanceReportPage = () => {
               <Label htmlFor="finance-to">{t("finance.to")}</Label>
               <Input id="finance-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); updateParams({ page: 1 }); }} />
             </div>
+          </div>
+        ) : null}
+        {module === "class" ? (
+          <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
+            <Switch
+              id="include-pending"
+              checked={includePending}
+              onCheckedChange={(checked) => {
+                setIncludePending(checked);
+                updateParams({ page: 1 });
+              }}
+            />
+            <Label htmlFor="include-pending" className="cursor-pointer text-sm font-normal">
+              {t("finance.includePending")}
+            </Label>
           </div>
         ) : null}
       </div>
