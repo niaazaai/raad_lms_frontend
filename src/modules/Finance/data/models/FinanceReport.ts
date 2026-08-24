@@ -81,4 +81,5 @@ export interface FinanceReportParams {
   per_page?: number;
   sort_by?: string;
   sort_dir?: string;
+  include_pending?: boolean | 0 | 1;
 }
