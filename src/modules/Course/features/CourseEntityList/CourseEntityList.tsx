@@ -514,6 +514,14 @@ const CourseEntityList = ({ forcedSlug }: CourseEntityListProps = {}) => {
           };
           return labels[raw] ?? raw;
         }
+        if (key === "students_count") {
+          const count = Number(row.students_count ?? 0);
+          return (
+            <span className="font-medium tabular-nums">
+              {Number.isNaN(count) ? 0 : count}
+            </span>
+          );
+        }
         if (key === "schedule_date") {
           return <ScheduleDateBadge row={row} />;
         }
