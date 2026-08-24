@@ -162,6 +162,7 @@ export const COURSE_ENTITY_REGISTRY: Record<CourseEntitySlug, CourseEntityConfig
       "sub_category_name",
       "name",
       "instructor_name",
+      "students_count",
       "class_type",
       "schedule_days",
       "class_fee",
