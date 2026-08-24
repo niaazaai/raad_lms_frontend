@@ -50,6 +50,8 @@ export interface AttendanceGrid {
     id: number;
     name?: string;
     class_code?: string;
+    status?: string | null;
+    can_edit?: boolean;
     schedule_days?: string | null;
     schedule_days_label?: string | null;
     start_date?: string | null;
