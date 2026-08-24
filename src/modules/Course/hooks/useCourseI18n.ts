@@ -90,6 +90,7 @@ const COLUMN_KEYS = new Set([
   "discount_percent",
   "fee_amount",
   "paid_amount",
+  "students_count",
 ]);
 
 export function useCourseI18n() {
