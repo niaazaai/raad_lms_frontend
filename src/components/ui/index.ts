@@ -60,6 +60,7 @@ export {
 } from "./dropdown-menu";
 export { DataTable } from "./data-table";
 export { Switch } from "./switch";
+export { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "./tooltip";
 export { Checkbox } from "./checkbox";
 export { default as PageBreadcrumb } from "./page-breadcrumb";
 export { default as ImageDropzone } from "./image-dropzone";
