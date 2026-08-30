@@ -27,12 +27,18 @@ export function extractManualInvoiceRows(response: unknown): ManualInvoiceTransa
   if (!response || typeof response !== "object") return [];
   const envelope = response as { data?: unknown };
   if (Array.isArray(envelope.data)) return envelope.data as ManualInvoiceTransactionRow[];
+  if (envelope.data && typeof envelope.data === "object" && Array.isArray((envelope.data as { data?: unknown }).data)) {
+    return (envelope.data as { data: ManualInvoiceTransactionRow[] }).data;
+  }
   return [];
 }
 
 export function extractManualInvoicePagination(response: unknown): DataTablePaginationMeta | null {
   if (!response || typeof response !== "object") return null;
-  return (response as { meta?: { pagination?: DataTablePaginationMeta } }).meta?.pagination ?? null;
+  const topLevel = (response as { meta?: { pagination?: DataTablePaginationMeta } }).meta?.pagination;
+  if (topLevel) return topLevel;
+  const nested = response as { data?: { meta?: { pagination?: DataTablePaginationMeta } } };
+  return nested.data?.meta?.pagination ?? null;
 }
 
 export function extractManualInvoiceSummary(response: unknown): ManualInvoiceSummary | null {

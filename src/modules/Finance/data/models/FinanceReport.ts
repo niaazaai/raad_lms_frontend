@@ -109,6 +109,8 @@ export interface FinanceTransaction {
   service_name?: string | null;
   service_cost?: number | string | null;
   internal_notes?: string | null;
+  transaction_type?: string | null;
+  transaction_type_label?: string | null;
   notes?: string | null;
   created_at?: string | null;
 }

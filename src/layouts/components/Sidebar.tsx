@@ -69,6 +69,7 @@ const NAV_TITLE_KEYS: Record<string, TranslationKey> = {
   "Upcoming dues": "sidebar.upcomingDues",
   "Manual invoice": "sidebar.manualInvoice",
   "Manual invoices": "sidebar.manualInvoices",
+  "Service income": "sidebar.manualInvoices",
   "Receive payment": "sidebar.receivePayment",
   Classes: "sidebar.classes",
   Attendance: "sidebar.attendance",
@@ -266,8 +267,8 @@ const Sidebar = () => {
             permission: "finance.read",
           },
           {
-            title: "Manual invoices",
-            path: "/finance/manual-invoices",
+            title: "Service income",
+            path: "/finance/service-income",
             icon: <Wallet className="h-4 w-4 shrink-0 stroke-[1.5]" />,
             permission: "finance.read",
           },

@@ -473,12 +473,12 @@ export const dashboardEn = {
         date: "Issue date",
       },
     },
-    manualInvoices: {
-      title: "Manual invoices",
-      subtitle: "Manual invoice transactions with service income and cost for the selected date range.",
-      create: "Create manual invoice",
+    serviceIncome: {
+      title: "Service income",
+      subtitle: "Service income transactions and costs for the selected date range.",
+      create: "Create service invoice",
       search: "Search invoice #, customer, service, or student…",
-      empty: "No manual invoice transactions in this date range.",
+      empty: "No service income transactions in this date range.",
       count: "Transactions",
       columns: {
         transactionDate: "Transaction date",
@@ -1053,12 +1053,12 @@ export const dashboardPs = {
         date: "د صادرېدو نېټه",
       },
     },
-    manualInvoices: {
-      title: "لاسي رسیدونه",
-      subtitle: "د لاسي رسید معاملې د ټاکلې نېټې په واټن کې.",
-      create: "لاسي رسید جوړ کړئ",
+    serviceIncome: {
+      title: "د خدمت عاید",
+      subtitle: "د خدمت عاید معاملې د ټاکلې نېټې په واټن کې.",
+      create: "د خدمت رسید جوړ کړئ",
       search: "رسید #، پیرودونکی، خدمت یا زده کوونکی ولټوئ…",
-      empty: "په دې نېټې واټن کې لاسي رسید نشته.",
+      empty: "په دې نېټې واټن کې د خدمت عاید معامله نشته.",
       count: "معاملې",
       columns: {
         transactionDate: "د معاملې نېټه",
@@ -1633,12 +1633,12 @@ export const dashboardFa = {
         date: "تاریخ صدور",
       },
     },
-    manualInvoices: {
-      title: "فاکتورهای دستی",
-      subtitle: "معاملات فاکتور دستی با درآمد و هزینه خدمت در بازه تاریخ انتخاب‌شده.",
-      create: "ایجاد فاکتور دستی",
+    serviceIncome: {
+      title: "درآمد خدمات",
+      subtitle: "معاملات درآمد خدمات و هزینه‌ها در بازه تاریخ انتخاب‌شده.",
+      create: "ایجاد فاکتور خدمات",
       search: "جستجوی شماره فاکتور، مشتری، خدمت یا دانشجو…",
-      empty: "در این بازه تاریخ معامله فاکتور دستی وجود ندارد.",
+      empty: "در این بازه تاریخ معامله درآمد خدمات وجود ندارد.",
       count: "معاملات",
       columns: {
         transactionDate: "تاریخ معامله",

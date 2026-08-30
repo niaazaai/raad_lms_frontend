@@ -19,8 +19,8 @@ function todayIsoDate(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-function currentMonthStart(): string {
-  return todayIsoDate().slice(0, 7) + "-01";
+function currentYearStart(): string {
+  return `${todayIsoDate().slice(0, 4)}-01-01`;
 }
 
 function formatMoney(value: unknown, currency?: string | null): string {
@@ -33,7 +33,7 @@ function formatMoney(value: unknown, currency?: string | null): string {
 const ManualInvoicesPage = () => {
   const { t } = useTranslation();
   const { hasPermission, hasAnyPermission } = useAuth();
-  const [from, setFrom] = useState(currentMonthStart());
+  const [from, setFrom] = useState(currentYearStart());
   const [to, setTo] = useState(todayIsoDate());
 
   const { params, debouncedSearch, updateParams } = useDataTableParams({
@@ -73,13 +73,13 @@ const ManualInvoicesPage = () => {
       columns: [
         {
           key: "transaction_date",
-          header: t("finance.manualInvoices.columns.transactionDate"),
+          header: t("finance.serviceIncome.columns.transactionDate"),
           sortable: true,
           render: (row) => row.transaction_date || "—",
         },
         {
           key: "transaction_id",
-          header: t("finance.manualInvoices.columns.transactionNumber"),
+          header: t("finance.serviceIncome.columns.transactionNumber"),
           sortable: false,
           render: (row) =>
             row.transaction_id ? <span className="font-mono text-xs">{row.transaction_id}</span> : "—",
@@ -117,7 +117,7 @@ const ManualInvoicesPage = () => {
         },
         {
           key: "amount",
-          header: t("finance.manualInvoices.columns.income"),
+          header: t("finance.serviceIncome.columns.income"),
           sortable: true,
           align: "right",
           render: (row) => formatMoney(row.amount, row.currency),
@@ -132,10 +132,10 @@ const ManualInvoicesPage = () => {
       ],
       rowId: (row) => row.id,
       searchable: true,
-      searchPlaceholder: t("finance.manualInvoices.search"),
+      searchPlaceholder: t("finance.serviceIncome.search"),
       filtersEnabled: false,
       paginationEnabled: true,
-      emptyMessage: t("finance.manualInvoices.empty"),
+      emptyMessage: t("finance.serviceIncome.empty"),
       actions: [
         {
           key: "print",
@@ -157,14 +157,14 @@ const ManualInvoicesPage = () => {
     <div className="w-full min-w-0 max-w-full space-y-6 p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("finance.manualInvoices.title")}</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{t("finance.manualInvoices.subtitle")}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">{t("finance.serviceIncome.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("finance.serviceIncome.subtitle")}</p>
           <div className="mt-2">
             <PageBreadcrumb
               items={[
                 { label: t("breadcrumb.dashboard"), to: "/dashboard" },
                 { label: t("finance.title"), to: "/finance" },
-                { label: t("finance.manualInvoices.title") },
+                { label: t("finance.serviceIncome.title") },
               ]}
             />
           </div>
@@ -177,7 +177,7 @@ const ManualInvoicesPage = () => {
             <Button type="button" asChild>
               <Link to="/finance/manual-invoice">
                 <Plus className="h-4 w-4" />
-                {t("finance.manualInvoices.create")}
+                {t("finance.serviceIncome.create")}
               </Link>
             </Button>
           ) : null}
@@ -244,7 +244,7 @@ const ManualInvoicesPage = () => {
         </div>
         <div className={cn("rounded-xl border border-border bg-gradient-to-br from-muted/40 via-card to-card p-5")}>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t("finance.manualInvoices.count")}
+            {t("finance.serviceIncome.count")}
           </p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-foreground">{summary?.count ?? 0}</p>
         </div>

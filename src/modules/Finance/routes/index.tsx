@@ -25,6 +25,11 @@ export const FinanceRoutes: ProtectedRouteType[] = [
     permission: "finance.read",
   },
   {
+    path: "/finance/service-income",
+    component: <ManualInvoicesPage />,
+    permission: "finance.read",
+  },
+  {
     path: "/finance/manual-invoices",
     component: <ManualInvoicesPage />,
     permission: "finance.read",

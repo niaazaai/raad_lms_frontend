@@ -493,7 +493,7 @@ const FinanceReportPage = () => {
               <Link to="/finance/upcoming-dues">{t("finance.upcomingDues.title")}</Link>
             </Button>
             <Button type="button" variant="outline" asChild>
-              <Link to="/finance/manual-invoices">{t("finance.manualInvoices.title")}</Link>
+              <Link to="/finance/service-income">{t("finance.serviceIncome.title")}</Link>
             </Button>
             <Button type="button" asChild>
               <Link to="/finance/receive-payment">{t("finance.receivePayment.title")}</Link>

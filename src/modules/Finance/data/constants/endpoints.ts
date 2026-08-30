@@ -12,7 +12,7 @@ export const FINANCE_ENDPOINTS = {
 export const FINANCE_QUERY_KEYS = {
   report: ["finance", "report"] as const,
   invoices: ["finance", "invoices"] as const,
-  manualInvoices: ["finance", "manual-invoices"] as const,
+  manualInvoices: ["finance", "service-income"] as const,
   upcomingInstallments: ["finance", "upcoming-installments"] as const,
   studentEnrollments: ["finance", "student-enrollments"] as const,
   enrollmentTransactions: (enrollmentId: number) =>

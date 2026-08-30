@@ -227,14 +227,14 @@ const ManualInvoicePage = () => {
                 items={[
                   { label: t("breadcrumb.dashboard"), to: "/dashboard" },
                   { label: t("finance.title"), to: "/finance" },
-                  { label: t("finance.manualInvoices.title"), to: "/finance/manual-invoices" },
+                  { label: t("finance.serviceIncome.title"), to: "/finance/service-income" },
                   { label: t("finance.manualInvoice.title") },
                 ]}
               />
             </div>
           </div>
           <Button type="button" variant="outline" asChild>
-            <Link to="/finance/manual-invoices">{t("finance.manualInvoices.title")}</Link>
+            <Link to="/finance/service-income">{t("finance.serviceIncome.title")}</Link>
           </Button>
         </div>
       </div>
