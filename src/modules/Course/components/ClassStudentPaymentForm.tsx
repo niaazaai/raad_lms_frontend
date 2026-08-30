@@ -361,7 +361,17 @@ export function ClassStudentPaymentForm({
 
       <div className="space-y-1.5">
         <Label>{t("course.classStudents.receivable")}</Label>
-        <Select value={form.receivable_status} onValueChange={(v) => onFormChange({ ...form, receivable_status: v })}>
+        <Select
+          value={form.receivable_status}
+          onValueChange={(v) => {
+            const classifyRemaining = v === "mof_pending" || v === "other_party";
+            onFormChange({
+              ...form,
+              receivable_status: v,
+              payment_amount: classifyRemaining ? "" : remainingBefore > 0 ? String(remainingBefore) : "",
+            });
+          }}
+        >
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
