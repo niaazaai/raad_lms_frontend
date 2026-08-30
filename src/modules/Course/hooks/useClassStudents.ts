@@ -55,6 +55,11 @@ export interface ClassStudentInvoice {
   pdf_url?: string | null;
 }
 
+export interface RecordPaymentResult {
+  enrollment: ClassStudentRow;
+  invoice?: ClassStudentInvoice | null;
+}
+
 /** Prefix for all class-student list queries (matches any pagination/filter params). */
 export const classStudentsListPrefix = (classId: number) =>
   ["lms-classes", classId, "students"] as const;
@@ -136,7 +141,7 @@ export function useDisableClassStudent(classId: number, enrollmentId: number) {
 
 export function useRecordClassStudentPayment(classId: number, enrollmentId: number) {
   return useMutationApi<
-    ClassStudentRow,
+    RecordPaymentResult,
     {
       discount_type: string;
       discount_amount?: number;
