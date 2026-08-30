@@ -48,10 +48,9 @@ const DashboardPage = () => {
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
+      style: "decimal",
       maximumFractionDigits: 0,
-    }).format(value);
+    }).format(value) + " AFN";
 
   return (
     <div className="space-y-6">
@@ -152,7 +151,7 @@ const DashboardPage = () => {
                     title={t("dashboard.earningsOverTime")}
                     subtitle={t("dashboard.earningsSubtitle")}
                     data={analytics.earnings_over_time ?? []}
-                    valuePrefix="$"
+                    valueSuffix=" AFN"
                     colorClass="text-primary"
                   />
                   <AnalyticsLineChart

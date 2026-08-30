@@ -177,18 +177,6 @@ const FinanceReportPage = () => {
         render: (row) => <span className="font-mono text-xs">{row.invoice_number || "—"}</span>,
       },
       {
-        key: "schedule_days",
-        header: t("finance.columns.days"),
-        sortable: false,
-        render: (row) => row.schedule_days_label || row.schedule_days || "—",
-      },
-      {
-        key: "timing",
-        header: t("finance.columns.timing"),
-        sortable: false,
-        render: (row) => row.timing || "—",
-      },
-      {
         key: "fees_amount",
         header: t("finance.columns.fees"),
         sortable: false,
@@ -303,12 +291,6 @@ const FinanceReportPage = () => {
         header: t("finance.columns.nextInstallment"),
         sortable: false,
         render: (row) => row.next_installment_date || "—",
-      },
-      {
-        key: "remarks",
-        header: t("finance.columns.remarks"),
-        sortable: false,
-        render: (row) => row.remarks || "—",
       },
     ],
     rowId: (row) => row.id,
