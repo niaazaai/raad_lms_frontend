@@ -155,8 +155,12 @@ const ReceivePaymentPage = () => {
   const handleSubmit = async () => {
     if (!selectedEnrollment || !classId || !enrollmentId || selectedEnrollmentFullyPaid) return;
     try {
-      await recordPayment.mutateAsync(buildPaymentPayloadFromForm(paymentForm, selectedEnrollment, classFee));
+      const response = await recordPayment.mutateAsync(buildPaymentPayloadFromForm(paymentForm, selectedEnrollment, classFee));
       toast.success(t("finance.receivePayment.success"));
+      const invoice = response.data?.invoice;
+      if (invoice?.pdf_url) {
+        window.open(invoice.pdf_url, "_blank", "noopener,noreferrer");
+      }
       const refreshed = await enrollmentsQuery.refetch();
       const updated = extractStudentEnrollments(refreshed.data).find((row) => row.id === enrollmentId);
       if (updated && !isEnrollmentFullyPaid(updated, classFee)) {
