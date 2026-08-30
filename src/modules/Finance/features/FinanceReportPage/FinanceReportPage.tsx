@@ -1,6 +1,32 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Button, Card, CardContent, DataTable, Input, Label, PageBreadcrumb, Switch } from "@/components/ui";
+import {
+  Bank,
+  Cart,
+  CheckCircle,
+  Clock,
+  Coins,
+  Eye,
+  GraphUp,
+  Group,
+  Percentage,
+  Undo,
+  Wallet,
+  WarningTriangle,
+} from "iconoir-react";
+import {
+  Button,
+  DataTable,
+  Input,
+  Label,
+  PageBreadcrumb,
+  Switch,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui";
+import FinanceDetailsDrawer from "./FinanceDetailsDrawer";
 import { PermissionDeniedCard, useAuth } from "@/features/auth";
 import { useDataTableParams } from "@/hooks";
 import { useTranslation } from "@/i18n/useTranslation";
@@ -56,27 +82,76 @@ function PaymentBadge({ value, label }: { value?: string | null; label?: string 
   );
 }
 
+type SummaryTone = "default" | "success" | "warning" | "danger" | "info" | "auxiliary";
+
 interface SummaryCardProps {
   label: string;
   value: number;
-  tone?: "default" | "success" | "warning" | "danger" | "info";
+  hint: string;
+  icon: ReactNode;
+  tone?: SummaryTone;
 }
 
-const SummaryCard = ({ label, value, tone = "default" }: SummaryCardProps) => {
-  const tones: Record<NonNullable<SummaryCardProps["tone"]>, string> = {
-    default: "text-foreground",
-    success: "text-success",
-    warning: "text-warning",
-    danger: "text-danger",
-    info: "text-info",
-  };
+const SUMMARY_THEMES: Record<SummaryTone, { border: string; bg: string; icon: string; value: string }> = {
+  default: {
+    border: "border-border",
+    bg: "from-muted/40 via-card to-card",
+    icon: "bg-muted text-muted-foreground",
+    value: "text-foreground",
+  },
+  success: {
+    border: "border-success/20",
+    bg: "from-success/8 via-card to-card",
+    icon: "bg-success/15 text-success",
+    value: "text-success",
+  },
+  warning: {
+    border: "border-warning/20",
+    bg: "from-warning/8 via-card to-card",
+    icon: "bg-warning/15 text-warning",
+    value: "text-warning",
+  },
+  danger: {
+    border: "border-danger/20",
+    bg: "from-danger/8 via-card to-card",
+    icon: "bg-danger/15 text-danger",
+    value: "text-danger",
+  },
+  info: {
+    border: "border-info/20",
+    bg: "from-info/8 via-card to-card",
+    icon: "bg-info/15 text-info",
+    value: "text-info",
+  },
+  auxiliary: {
+    border: "border-auxiliary/20",
+    bg: "from-auxiliary/8 via-card to-card",
+    icon: "bg-auxiliary/15 text-auxiliary",
+    value: "text-auxiliary",
+  },
+};
+
+const SummaryCard = ({ label, value, hint, icon, tone = "default" }: SummaryCardProps) => {
+  const theme = SUMMARY_THEMES[tone];
   return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className={cn("mt-1 text-xl font-semibold tabular-nums", tones[tone])}>{formatMoney(value)}</p>
-      </CardContent>
-    </Card>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div
+          className={cn(
+            "relative cursor-help rounded-xl border bg-gradient-to-br p-5 outline-none transition-shadow hover:shadow-md focus-visible:ring-2 focus-visible:ring-ring",
+            theme.border,
+            theme.bg
+          )}
+        >
+          <div className={cn("absolute end-4 top-4 rounded-lg p-2", theme.icon)}>{icon}</div>
+          <p className="pe-12 text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+          <p className={cn("mt-2 text-2xl font-bold tabular-nums tracking-tight", theme.value)}>
+            {formatMoney(value)}
+          </p>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="top">{hint}</TooltipContent>
+    </Tooltip>
   );
 };
 
@@ -91,10 +166,11 @@ const FinanceReportPage = () => {
   const [year, setYear] = useState(String(currentYear()));
   const [from, setFrom] = useState(currentMonth() + "-01");
   const [to, setTo] = useState(todayIsoDate());
+  const [detailsRow, setDetailsRow] = useState<FinanceClassRow | FinanceCourseRow | null>(null);
 
   const { params, debouncedSearch, updateParams } = useDataTableParams({
     defaultPageSize: 25,
-    defaultSortBy: "last_payment_date",
+    defaultSortBy: "last_transaction_at",
     defaultSortDir: "desc",
     searchDebounceMs: 400,
   });
@@ -133,11 +209,14 @@ const FinanceReportPage = () => {
     other_receivable: 0,
     irrecoverable_debt: 0,
     net_receivable: 0,
+    service_income: 0,
+    service_cost: 0,
   };
 
   const setModuleAndReset = (next: FinanceModule) => {
     setModule(next);
-    updateParams({ page: 1, sort_by: next === "course" ? "purchase_date" : "last_payment_date" });
+    setDetailsRow(null);
+    updateParams({ page: 1, sort_by: next === "course" ? "purchase_date" : "last_transaction_at" });
   };
 
   const setPeriodAndReset = (next: FinancePeriod) => {
@@ -292,6 +371,17 @@ const FinanceReportPage = () => {
         sortable: false,
         render: (row) => row.next_installment_date || "—",
       },
+      {
+        key: "actions",
+        header: t("dataTable.actions"),
+        sortable: false,
+        render: (row) => (
+          <Button type="button" variant="outline" size="sm" onClick={() => setDetailsRow(row)}>
+            <Eye className="h-4 w-4" />
+            {t("finance.details.viewDetails")}
+          </Button>
+        ),
+      },
     ],
     rowId: (row) => row.id,
     searchable: true,
@@ -346,6 +436,17 @@ const FinanceReportPage = () => {
         sortable: false,
         render: (row) => row.subscription_status_label || row.subscription_status || "—",
       },
+      {
+        key: "actions",
+        header: t("dataTable.actions"),
+        sortable: false,
+        render: (row) => (
+          <Button type="button" variant="outline" size="sm" onClick={() => setDetailsRow(row)}>
+            <Eye className="h-4 w-4" />
+            {t("finance.details.viewDetails")}
+          </Button>
+        ),
+      },
     ],
     rowId: (row) => row.id,
     searchable: true,
@@ -384,9 +485,20 @@ const FinanceReportPage = () => {
           </div>
         </div>
         {canReceivePayment ? (
-          <Button type="button" asChild>
-            <Link to="/finance/receive-payment">{t("finance.receivePayment.title")}</Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" asChild>
+              <Link to="/finance/invoices">{t("finance.invoices.title")}</Link>
+            </Button>
+            <Button type="button" variant="outline" asChild>
+              <Link to="/finance/upcoming-dues">{t("finance.upcomingDues.title")}</Link>
+            </Button>
+            <Button type="button" variant="outline" asChild>
+              <Link to="/finance/manual-invoices">{t("finance.manualInvoices.title")}</Link>
+            </Button>
+            <Button type="button" asChild>
+              <Link to="/finance/receive-payment">{t("finance.receivePayment.title")}</Link>
+            </Button>
+          </div>
         ) : null}
       </div>
 
@@ -459,25 +571,120 @@ const FinanceReportPage = () => {
         ) : null}
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <TooltipProvider delayDuration={150}>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {module === "class" ? (
           <>
-            <SummaryCard label={t("finance.classIncome")} value={summary.class_income} tone="success" />
-            <SummaryCard label={t("finance.paid")} value={summary.paid_amount} />
-            <SummaryCard label={t("finance.mofReceivable")} value={summary.mof_receivable} tone="warning" />
-            <SummaryCard label={t("finance.otherReceivable")} value={summary.other_receivable} tone="info" />
-            <SummaryCard label={t("finance.refunds")} value={summary.refund_amount} />
-            <SummaryCard label={t("finance.irrecoverable")} value={summary.irrecoverable_debt} tone="danger" />
-            <SummaryCard label={t("finance.netReceivable")} value={summary.net_receivable} tone="warning" />
-            <SummaryCard label={t("finance.totalIncome")} value={summary.total_income} tone="success" />
+            <SummaryCard
+              label={t("finance.classGrossIncome")}
+              value={summary.gross_amount ?? summary.fees_amount}
+              hint={t("finance.hints.gross")}
+              icon={<Wallet className="h-5 w-5" />}
+              tone="success"
+            />
+            <SummaryCard
+              label={t("finance.classDiscount")}
+              value={summary.discount_amount}
+              hint={t("finance.hints.discount")}
+              icon={<Percentage className="h-5 w-5" />}
+              tone="info"
+            />
+            <SummaryCard
+              label={t("finance.mofReceivable")}
+              value={summary.mof_receivable}
+              hint={t("finance.hints.mof")}
+              icon={<Bank className="h-5 w-5" />}
+              tone="warning"
+            />
+            <SummaryCard
+              label={t("finance.otherReceivable")}
+              value={summary.other_receivable}
+              hint={t("finance.hints.other")}
+              icon={<Group className="h-5 w-5" />}
+              tone="info"
+            />
+            <SummaryCard
+              label={t("finance.refunds")}
+              value={summary.refund_amount}
+              hint={t("finance.hints.refund")}
+              icon={<Undo className="h-5 w-5" />}
+            />
+            <SummaryCard
+              label={t("finance.irrecoverable")}
+              value={summary.irrecoverable_debt}
+              hint={t("finance.hints.irrecoverable")}
+              icon={<WarningTriangle className="h-5 w-5" />}
+              tone="danger"
+            />
+            <SummaryCard
+              label={t("finance.paid")}
+              value={summary.paid_amount}
+              hint={t("finance.hints.paid")}
+              icon={<CheckCircle className="h-5 w-5" />}
+              tone="success"
+            />
+            <SummaryCard
+              label={t("finance.columns.net")}
+              value={summary.net_amount}
+              hint={t("finance.hints.net")}
+              icon={<GraphUp className="h-5 w-5" />}
+              tone="auxiliary"
+            />
+            <SummaryCard
+              label={t("finance.netReceivable")}
+              value={summary.net_receivable}
+              hint={t("finance.hints.netReceivable")}
+              icon={<Clock className="h-5 w-5" />}
+              tone="warning"
+            />
+            <SummaryCard
+              label={t("finance.netServiceIncome")}
+              value={summary.service_income ?? 0}
+              hint={t("finance.hints.serviceIncome")}
+              icon={<Coins className="h-5 w-5" />}
+              tone="success"
+            />
+            <SummaryCard
+              label={t("finance.netServiceCost")}
+              value={summary.service_cost ?? 0}
+              hint={t("finance.hints.serviceCost")}
+              icon={<Cart className="h-5 w-5" />}
+              tone="danger"
+            />
           </>
         ) : (
           <>
-            <SummaryCard label={t("finance.courseIncome")} value={summary.course_income} tone="success" />
-            <SummaryCard label={t("finance.totalIncome")} value={summary.total_income} />
+            <SummaryCard
+              label={t("finance.courseIncome")}
+              value={summary.course_income}
+              hint={t("finance.hints.courseIncome")}
+              icon={<Wallet className="h-5 w-5" />}
+              tone="success"
+            />
+            <SummaryCard
+              label={t("finance.totalIncome")}
+              value={summary.total_income}
+              hint={t("finance.hints.courseIncome")}
+              icon={<GraphUp className="h-5 w-5" />}
+            />
+            <SummaryCard
+              label={t("finance.netServiceIncome")}
+              value={summary.service_income ?? 0}
+              hint={t("finance.hints.serviceIncome")}
+              icon={<Coins className="h-5 w-5" />}
+              tone="success"
+            />
+            <SummaryCard
+              label={t("finance.netServiceCost")}
+              value={summary.service_cost ?? 0}
+              hint={t("finance.hints.serviceCost")}
+              icon={<Cart className="h-5 w-5" />}
+              tone="danger"
+            />
           </>
         )}
       </div>
+      </TooltipProvider>
 
       {module === "class" ? (
         <DataTable
@@ -498,6 +705,14 @@ const FinanceReportPage = () => {
           isLoading={isLoading}
         />
       )}
+
+      <FinanceDetailsDrawer
+        open={detailsRow != null}
+        onClose={() => setDetailsRow(null)}
+        module={module}
+        classRow={module === "class" ? (detailsRow as FinanceClassRow | null) : null}
+        courseRow={module === "course" ? (detailsRow as FinanceCourseRow | null) : null}
+      />
     </div>
   );
 };
