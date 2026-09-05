@@ -44,6 +44,7 @@ export interface ClassStudentRow {
   notes?: string | null;
   class_name?: string | null;
   class_code?: string | null;
+  class_status?: string | null;
 }
 
 export interface ClassStudentInvoice {

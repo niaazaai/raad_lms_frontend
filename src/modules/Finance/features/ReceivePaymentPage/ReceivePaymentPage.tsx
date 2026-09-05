@@ -94,6 +94,9 @@ const ReceivePaymentPage = () => {
         const rowClassFee = row.class_fee != null ? Number(row.class_fee) : 0;
         const name = row.class_name || t("finance.receivePayment.unknownClass");
         const code = row.class_code ? ` (${row.class_code})` : "";
+        const classStatus = row.class_status
+          ? ` · ${t(`course.classStatus.${row.class_status}` as "course.classStatus.active")}`
+          : "";
         const due = resolveEnrollmentRemainingDue(row, rowClassFee);
         const paidSuffix = isEnrollmentFullyPaid(row, rowClassFee)
           ? ` · ${t("course.paymentStatus.paid")}`
@@ -102,7 +105,7 @@ const ReceivePaymentPage = () => {
             : "";
         return {
           value: String(row.id),
-          label: `${name}${code}${paidSuffix}`,
+          label: `${name}${code}${classStatus}${paidSuffix}`,
         };
       }),
     [enrollments, t],
