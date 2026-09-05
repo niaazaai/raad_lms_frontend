@@ -19,7 +19,6 @@ import {
   ClassStudentPaymentForm,
   defaultPaymentFormState,
   isEnrollmentFullyPaid,
-  resolveEnrollmentRemainingDue,
   type PaymentFormState,
 } from "@/modules/Course/components/ClassStudentPaymentForm";
 import { useRecordClassStudentPayment } from "@/modules/Course/hooks/useClassStudents";
@@ -91,21 +90,13 @@ const ReceivePaymentPage = () => {
   const enrollmentOptions = useMemo(
     () =>
       enrollments.map((row) => {
-        const rowClassFee = row.class_fee != null ? Number(row.class_fee) : 0;
         const name = row.class_name || t("finance.receivePayment.unknownClass");
-        const code = row.class_code ? ` (${row.class_code})` : "";
         const classStatus = row.class_status
           ? ` · ${t(`course.classStatus.${row.class_status}` as "course.classStatus.active")}`
           : "";
-        const due = resolveEnrollmentRemainingDue(row, rowClassFee);
-        const paidSuffix = isEnrollmentFullyPaid(row, rowClassFee)
-          ? ` · ${t("course.paymentStatus.paid")}`
-          : due > 0
-            ? ` · ${t("finance.receivePayment.due")} ${due.toLocaleString()}`
-            : "";
         return {
           value: String(row.id),
-          label: `${name}${code}${classStatus}${paidSuffix}`,
+          label: `${name}${classStatus}`,
         };
       }),
     [enrollments, t],
